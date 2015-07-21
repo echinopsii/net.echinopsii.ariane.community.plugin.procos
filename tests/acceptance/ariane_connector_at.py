@@ -1,7 +1,7 @@
 import socket
 import unittest
 from ariane_clip3.injector import InjectorUITreeService, InjectorService, InjectorGearSkeleton
-from ariane_connector import ArianeConnector
+from connector import ArianeConnector
 from config import Config
 
 __author__ = 'mffrench'

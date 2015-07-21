@@ -1,5 +1,5 @@
 # Ariane ProcOS plugin
-# Ariane connectors
+# Connectors to Ariane server
 #
 # Copyright (C) 2015 echinopsii
 #
