@@ -106,3 +106,5 @@ class Config(object):
 
         if ariane_procos_missing_fields.__len__() > 0:
             raise exceptions.ArianeProcOSConfigMandatoryFieldsMissingError(ariane_procos_missing_fields)
+
+        return self
