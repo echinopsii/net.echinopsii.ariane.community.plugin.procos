@@ -27,11 +27,12 @@ class DirectoryGear(InjectorGearSkeleton):
     def __init__(self):
         super(DirectoryGear, self).__init__(
             gear_id='ariane.community.plugin.procos.gears.cache.directory_gear@localhost',
-            gear_name='docker@localhost',
+            gear_name='procos_directory_gear@localhost',
             gear_description='Ariane remote injector for localhost',
             gear_admin_queue='ariane.community.plugin.procos.gears.cache.directory_gear@localhost',
             running=False
         )
+        self.update_count = 0
 
     def on_start(self):
         self.running = True
@@ -52,12 +53,15 @@ class DirectoryGear(InjectorGearSkeleton):
             self.running = False
             self.cache(running=self.running)
 
+    def synchronize_ariane_directories(self, data):
+        self.update_count += 1
+
 
 class SystemGear(InjectorGearSkeleton):
-    def __init__(self, sleeping_period):
+    def __init__(self, sleeping_period, directory_gear_proxy, mapping_gear_proxy):
         super(SystemGear, self).__init__(
             gear_id='ariane.community.plugin.procos.gears.cache.system_gear@localhost',
-            gear_name='docker@localhost',
+            gear_name='procos_system_gear@localhost',
             gear_description='Ariane remote injector for localhost',
             gear_admin_queue='ariane.community.plugin.procos.gears.cache.system_gear@localhost',
             running=False
@@ -66,12 +70,17 @@ class SystemGear(InjectorGearSkeleton):
         self.service = None
         self.service_name = 'docker@localhost gear'
         self.component = SystemComponent.start(attached_gear_id=self.gear_id()).proxy()
+        self.directory_gear = directory_gear_proxy
+        self.mapping_gear = mapping_gear_proxy
 
     def run(self):
         if self.sleeping_period is not None and self.sleeping_period > 0:
             while self.running:
                 time.sleep(self.sleeping_period)
                 self.component.sniff()
+                data_blob = self.component.data_blob()
+                self.directory_gear.synchronize_ariane_directories(data_blob)
+                self.mapping_gear.synchronize_ariane_mapping(data_blob)
 
     def on_start(self):
         self.running = True
@@ -106,11 +115,12 @@ class MappingGear(InjectorGearSkeleton):
     def __init__(self):
         super(MappingGear, self).__init__(
             gear_id='ariane.community.plugin.procos.gears.cache.mapping_gear@localhost',
-            gear_name='docker@localhost',
+            gear_name='procos_mapping_gear@localhost',
             gear_description='Ariane remote injector for localhost',
             gear_admin_queue='ariane.community.plugin.procos.gears.cache.mapping_gear@localhost',
             running=False
         )
+        self.update_count = 0
 
     def on_start(self):
         self.running = True
@@ -130,3 +140,6 @@ class MappingGear(InjectorGearSkeleton):
         if self.running:
             self.running = False
             self.cache(running=self.running)
+
+    def synchronize_ariane_mapping(self, data):
+        self.update_count += 1

@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import datetime
+import socket
 from ariane_clip3.injector import InjectorComponentSkeleton, InjectorCachedComponent
 
 __author__ = 'mffrench'
@@ -23,27 +24,27 @@ __author__ = 'mffrench'
 
 class SystemComponent(InjectorComponentSkeleton):
     def __init__(self, attached_gear_id=None):
+        self.hostname = socket.gethostname()
         super(SystemComponent, self).__init__(
             component_id=
-            'ariane.community.plugin.procos.components.cache.system_component@localhost',
+            'ariane.community.plugin.procos.components.cache.system_component@' + self.hostname,
             component_name='procos_system_component@localhost',
             component_admin_queue=
-            'ariane.community.plugin.procos.components.cache.system_component@localhost',
+            'ariane.community.plugin.procos.components.cache.system_component@' + self.hostname,
             refreshing=False, next_action=InjectorCachedComponent.action_create,
             json_last_refresh=datetime.datetime.now(),
             attached_gear_id=attached_gear_id,
             data_blob=''
         )
-        #self.my_object_field = "my_object_field_value"
         self.version = 0
 
     def data_blob(self):
-        #json_obj = {
-        #    'my_object_field': self.my_object_field
-        #}
-        return None #str(json_obj).replace("'", '"')
+        json_obj = {
+            'hostname': self.hostname
+        }
+        return str(json_obj).replace("'", '"')
 
     def sniff(self):
-        #self.my_object_field = "my_object_field_value_refreshed_by_component_gear["+str(self.version)+"]"
+        self.hostname = socket.gethostname()
         self.cache(data_blob=self.data_blob())
         self.version += 1
