@@ -23,7 +23,7 @@ __author__ = 'mffrench'
 
 
 class SystemComponent(InjectorComponentSkeleton):
-    def __init__(self, attached_gear_id=None):
+    def __init__(self, config, attached_gear_id=None):
         self.hostname = socket.gethostname()
         super(SystemComponent, self).__init__(
             component_id=

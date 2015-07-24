@@ -38,7 +38,7 @@ class GearsSkeletonTest(unittest.TestCase):
     def test_gear_skeleton(self):
         directory_gear = DirectoryGear.start().proxy()
         mapping_gear = MappingGear.start().proxy()
-        SystemGear.start(sleeping_period=4,
+        SystemGear.start(config=self.config,
                          directory_gear_proxy=directory_gear,
                          mapping_gear_proxy=mapping_gear).proxy()
         time.sleep(5)

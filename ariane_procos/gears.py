@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import socket
 import threading
 import time
 from ariane_clip3.injector import InjectorGearSkeleton
@@ -25,11 +26,12 @@ __author__ = 'mffrench'
 
 class DirectoryGear(InjectorGearSkeleton):
     def __init__(self):
+        self.hostname = socket.gethostname()
         super(DirectoryGear, self).__init__(
-            gear_id='ariane.community.plugin.procos.gears.cache.directory_gear@localhost',
-            gear_name='procos_directory_gear@localhost',
-            gear_description='Ariane remote injector for localhost',
-            gear_admin_queue='ariane.community.plugin.procos.gears.cache.directory_gear@localhost',
+            gear_id='ariane.community.plugin.procos.gears.cache.directory_gear@'+self.hostname,
+            gear_name='procos_directory_gear@'+self.hostname,
+            gear_description='Ariane ProcOS directory gear for '+self.hostname,
+            gear_admin_queue='ariane.community.plugin.procos.gears.cache.directory_gear@'+self.hostname,
             running=False
         )
         self.update_count = 0
@@ -53,23 +55,24 @@ class DirectoryGear(InjectorGearSkeleton):
             self.running = False
             self.cache(running=self.running)
 
-    def synchronize_ariane_directories(self, data):
+    def synchronize_with_ariane_directories(self, data):
         self.update_count += 1
 
 
 class SystemGear(InjectorGearSkeleton):
-    def __init__(self, sleeping_period, directory_gear_proxy, mapping_gear_proxy):
+    def __init__(self, config, directory_gear_proxy, mapping_gear_proxy):
+        self.hostname = socket.gethostname()
         super(SystemGear, self).__init__(
-            gear_id='ariane.community.plugin.procos.gears.cache.system_gear@localhost',
-            gear_name='procos_system_gear@localhost',
-            gear_description='Ariane remote injector for localhost',
-            gear_admin_queue='ariane.community.plugin.procos.gears.cache.system_gear@localhost',
+            gear_id='ariane.community.plugin.procos.gears.cache.system_gear@'+self.hostname,
+            gear_name='procos_system_gear@'+self.hostname,
+            gear_description='Ariane ProcOS system gear for '+self.hostname,
+            gear_admin_queue='ariane.community.plugin.procos.gears.cache.system_gear@'+self.hostname,
             running=False
         )
-        self.sleeping_period = sleeping_period
+        self.sleeping_period = config.sleeping_period
         self.service = None
-        self.service_name = 'docker@localhost gear'
-        self.component = SystemComponent.start(attached_gear_id=self.gear_id()).proxy()
+        self.service_name = 'system_procos@'+self.hostname+' gear'
+        self.component = SystemComponent.start(config, attached_gear_id=self.gear_id()).proxy()
         self.directory_gear = directory_gear_proxy
         self.mapping_gear = mapping_gear_proxy
 
@@ -79,8 +82,8 @@ class SystemGear(InjectorGearSkeleton):
                 time.sleep(self.sleeping_period)
                 self.component.sniff()
                 data_blob = self.component.data_blob()
-                self.directory_gear.synchronize_ariane_directories(data_blob)
-                self.mapping_gear.synchronize_ariane_mapping(data_blob)
+                self.directory_gear.synchronize_with_ariane_directories(data_blob)
+                self.mapping_gear.synchronize_with_ariane_mapping(data_blob)
 
     def on_start(self):
         self.running = True
@@ -113,11 +116,12 @@ class SystemGear(InjectorGearSkeleton):
 
 class MappingGear(InjectorGearSkeleton):
     def __init__(self):
+        self.hostname = socket.gethostname()
         super(MappingGear, self).__init__(
-            gear_id='ariane.community.plugin.procos.gears.cache.mapping_gear@localhost',
-            gear_name='procos_mapping_gear@localhost',
-            gear_description='Ariane remote injector for localhost',
-            gear_admin_queue='ariane.community.plugin.procos.gears.cache.mapping_gear@localhost',
+            gear_id='ariane.community.plugin.procos.gears.cache.mapping_gear@'+self.hostname,
+            gear_name='procos_mapping_gear@'+self.hostname,
+            gear_description='Ariane ProcOS injector gear for '+self.hostname,
+            gear_admin_queue='ariane.community.plugin.procos.gears.cache.mapping_gear@'+self.hostname,
             running=False
         )
         self.update_count = 0
@@ -141,5 +145,5 @@ class MappingGear(InjectorGearSkeleton):
             self.running = False
             self.cache(running=self.running)
 
-    def synchronize_ariane_mapping(self, data):
+    def synchronize_with_ariane_mapping(self, data):
         self.update_count += 1
