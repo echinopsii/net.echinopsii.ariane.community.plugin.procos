@@ -36,11 +36,7 @@ class GearsSkeletonTest(unittest.TestCase):
         self.ariane_connector.stop()
 
     def test_gear_skeleton(self):
-        directory_gear = DirectoryGear.start().proxy()
-        mapping_gear = MappingGear.start().proxy()
-        SystemGear.start(config=self.config,
-                         directory_gear_proxy=directory_gear,
-                         mapping_gear_proxy=mapping_gear).proxy()
+        system_gear = SystemGear.start(config=self.config).proxy()
         time.sleep(5)
-        self.assertTrue(directory_gear.update_count.get() == 1)
-        self.assertTrue(mapping_gear.update_count.get() == 1)
+        self.assertTrue(system_gear.directory_gear.get().update_count.get() == 1)
+        self.assertTrue(system_gear.mapping_gear.get().update_count.get() == 1)

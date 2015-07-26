@@ -38,9 +38,6 @@ class Config(object):
         self.sleeping_period = None
         self.datacenter_name = None
         self.routing_area = None
-        self.process_filter = None
-        self.netstat_filter = None
-        self.lsof_filter = None
 
     def parse(self, config_file):
         if not os.path.isfile(config_file):
@@ -99,18 +96,10 @@ class Config(object):
                 except ValueError:
                     raise exceptions.ArianeProcOSConfigMandatoryFieldsValueError('sleeping_period',
                                                                                  'should be an integer !')
-            self.datacenter_name = config['ariane_procos']['datacenter_name']
-            if self.datacenter_name is None or not self.datacenter_name:
-                ariane_procos_missing_fields.append('datacenter_name')
-
-            self.routing_area = config['ariane_procos']['routing_area']
-            if self.routing_area is None or not self.routing_area:
-                ariane_procos_missing_fields.append('routing_area')
 
             if ariane_procos_missing_fields.__len__() == 0:
-                self.process_filter = config['ariane_procos']['process_filter']
-                self.netstat_filter = config['ariane_procos']['netstat_filter']
-                self.lsof_filter = config['ariane_procos']['lsof_filter']
+                self.datacenter_name = config['ariane_procos']['datacenter_name']
+                self.routing_area = config['ariane_procos']['routing_area']
         else:
             raise exceptions.ArianeProcOSConfigMandatorySectionMissingError('ariane_server')
 

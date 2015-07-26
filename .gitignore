@@ -1,2 +1,3 @@
 ariane_procos/__pycache__/
 tests/acceptance/__pycache__/
+tests/unit/__pycache__/

@@ -18,12 +18,14 @@
 import datetime
 import socket
 from ariane_clip3.injector import InjectorComponentSkeleton, InjectorCachedComponent
+from system import OperatingSystem
 
 __author__ = 'mffrench'
 
 
 class SystemComponent(InjectorComponentSkeleton):
     def __init__(self, config, attached_gear_id=None):
+        self.config = config
         self.hostname = socket.gethostname()
         super(SystemComponent, self).__init__(
             component_id=
@@ -36,15 +38,13 @@ class SystemComponent(InjectorComponentSkeleton):
             attached_gear_id=attached_gear_id,
             data_blob=''
         )
+        self.operating_system = OperatingSystem()
         self.version = 0
 
     def data_blob(self):
-        json_obj = {
-            'hostname': self.hostname
-        }
-        return str(json_obj).replace("'", '"')
+        return self.operating_system.operating_system_2_json()
 
     def sniff(self):
-        self.hostname = socket.gethostname()
+        self.operating_system.update()
         self.cache(data_blob=self.data_blob())
         self.version += 1

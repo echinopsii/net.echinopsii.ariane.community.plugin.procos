@@ -15,30 +15,90 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import copy
+import json
 import socket
 import psutil
+from psutil._common import NicDuplex
 
 __author__ = 'mffrench'
 
 
 class Connection(object):
-    def __init__(self, transport_protocol=None, source_ip=None, source_port=None,
-                 destination_ip=None, destination_port=None, destination_osi_id=None,
+    def __init__(self, family=None, type=None, source_ip=None, source_port=None,
+                 destination_ip=None, destination_port=None, destination_osi_id=None, destination_subnet_id=None,
                  destination_routing_area_id=None, destination_datacenter_id=None, status=None):
-        self.transport_protocol = transport_protocol
+        self.family = family
+        self.type = type
         self.source_ip = source_ip
         self.source_port = source_port
         self.destination_ip = destination_ip
         self.destination_port = destination_port
         self.destination_osi_id = destination_osi_id
+        self.destination_subnet_id = destination_subnet_id
         self.destination_routing_area_id = destination_routing_area_id
         self.destination_datacenter_id = destination_datacenter_id
         self.status = status
 
+    def __str__(self):
+        return json.dumps(self.connection_2_json())
+
+    def connection_2_json(self):
+        json_obj = {
+            'status': self.status,
+            'family': self.family,
+            'type': self.type,
+            'source_ip': self.source_ip,
+            'source_port': self.source_port,
+            'destination_ip': self.destination_ip,
+            'destination_port': self.destination_port,
+            'destination_osi_id': self.destination_osi_id,
+            'destination_subnet_id': self.destination_subnet_id,
+            'destination_routing_area_id': self.destination_routing_area_id,
+            'destination_datacenter_id': self.destination_datacenter_id
+        }
+        return json_obj
+
+    @staticmethod
+    def json_2_connection(json_obj):
+        return Connection(
+            status=json_obj['status'],
+            family=json_obj['family'],
+            type=json_obj['type'],
+            source_ip=json_obj['source_ip'],
+            source_port=json_obj['source_port'],
+            destination_ip=json_obj['destination_ip'],
+            destination_port=json_obj['destination_port'],
+            destination_osi_id=json_obj['destination_osi_id'],
+            destination_subnet_id=json_obj['destination_subnet_id'],
+            destination_routing_area_id=json_obj['destination_routing_area_id'],
+            destination_datacenter_id=json_obj['destination_datacenter_id']
+        )
+
+    @staticmethod
+    def type_2_string(type):
+        if type == socket.SocketType.SOCK_STREAM:
+            return 'SOCK_STREAM'
+        elif type == socket.SocketType.SOCK_DGRAM:
+            return 'SOCK_DGRAM'
+        else:
+            return type
+
+    @staticmethod
+    def family_2_string(family):
+        if family == socket.AddressFamily.AF_INET:
+            return 'AF_INET'
+        elif family == socket.AddressFamily.AF_INET6:
+            return 'AF_INET6'
+        elif family == socket.AddressFamily.AF_UNIX:
+            return 'AF_UNIX'
+        else:
+            return family
+
 
 class Process(object):
     def __init__(self, mapping_id=None, is_node=None, name=None, pid=None, create_time=None, exe=None, cwd=None,
-                 cmdLine=None, username=None, cpu_affinity=None, terminal=None, connections=None, uids=None, gids=None):
+                 cmdline=None, username=None, cpu_affinity=None, terminal=None, connections=None, uids=None, gids=None):
         self.mapping_id = mapping_id
         self.is_node = is_node
         self.pid = pid
@@ -46,13 +106,51 @@ class Process(object):
         self.create_time = create_time
         self.exe = exe
         self.cwd = cwd
-        self.cmdline = cmdLine
+        self.cmdline = cmdline
         self.username = username
         self.cpu_affinity = cpu_affinity
         self.terminal = terminal
         self.connections = connections
         self.uids = uids
         self.gids = gids
+
+    def __str__(self):
+        return json.dumps(self.proc_2_json())
+
+    def proc_2_json(self):
+        connections_json = []
+        if self.connections is not None:
+            for connection in self.connections:
+                connections_json.append(connection.connection_2_json())
+        json_obj = {
+            'pid': self.pid,
+            'name': self.name,
+            'create_time': self.create_time,
+            'exe': self.exe,
+            'cwd': self.cwd,
+            'cmdline': self.cmdline,
+            'username': self.username,
+            'cpu_affinity': self.cpu_affinity,
+            'terminal': self.terminal,
+            'connections': connections_json,
+            'uids': self.uids,
+            'gids': self.gids,
+            'mapping_id': self.mapping_id,
+            'is_node': self.is_node
+        }
+        return json_obj
+
+    @staticmethod
+    def json_2_proc(json_obj):
+        connections = []
+        connections_json = json_obj['connections']
+        for connection_json in connections_json:
+            connections.append(Connection.json_2_connection(connection_json))
+        return Process(pid=json_obj['pid'], name=json_obj['name'], create_time=json_obj['create_time'],
+                       exe=json_obj['exe'], cwd=json_obj['cwd'], cmdline=json_obj['cmdline'],
+                       username=json_obj['username'], cpu_affinity=json_obj['cpu_affinity'],
+                       terminal=json_obj['terminal'], connections=connections, uids=json_obj['uids'],
+                       gids=json_obj['gids'], mapping_id=json_obj['mapping_id'], is_node=json_obj['is_node'])
 
 
 class NetworkInterfaceCard(object):
@@ -69,25 +167,131 @@ class NetworkInterfaceCard(object):
         self.ipv4_mask = ipv4_mask
         self.ipv4_fqdn = ipv4_fqdn
 
+    def __str__(self):
+        return json.dumps(self.nic_2_json())
+
+    def nic_2_json(self):
+        json_obj = {
+            'name': self.name,
+            'mac_address': self.mac_address,
+            'duplex': self.duplex,
+            'speed': self.speed,
+            'mtu': self.mtu,
+            'ipv4_address': self.ipv4_address,
+            'ipv4_mask': self.ipv4_mask,
+            'ipv4_fqdn': self.ipv4_fqdn,
+            'nic_id': self.nic_id,
+            'ipv4_id': self.ipv4_id
+        }
+        return json_obj
+
+    @staticmethod
+    def json_2_nic(json_obj):
+        return NetworkInterfaceCard(nic_id=json_obj['nic_id'], name=json_obj['name'],
+                                    mac_address=json_obj['mac_address'], duplex=json_obj['duplex'],
+                                    speed=json_obj['speed'], mtu=json_obj['mtu'],
+                                    ipv4_address=json_obj['ipv4_address'], ipv4_mask=json_obj['ipv4_mask'],
+                                    ipv4_fqdn=json_obj['ipv4_fqdn'], ipv4_id=json_obj['ipv4_id'])
+
+
+    @staticmethod
+    def duplex_2_string(duplex):
+        if duplex == NicDuplex.NIC_DUPLEX_UNKNOWN:
+            return 'UNKNOWN'
+        elif duplex == NicDuplex.NIC_DUPLEX_FULL:
+            return 'FULL'
+        elif duplex == NicDuplex.NIC_DUPLEX_HALF:
+            return 'HALF'
+        else:
+            return 'UNKNOWN'
+
 
 class OperatingSystem(object):
-    def __init__(self, config):
-        self.init_config = config
-        self.container_id = None
-        self.osi_id = None
-        self.datacenter_id = None
-        self.routing_area_id = None
-        self.subnet_id = None
-        self.hostname = socket.gethostname()
+    def __init__(self, container_id=None, osi_id=None, datacenter_id=None, routing_area_id=None,
+                 subnet_id=None, hostname=None, last_nics=None, nics=None, last_processs=None, processs=None):
+        self.container_id = container_id
+        self.osi_id = osi_id
+        self.datacenter_id = datacenter_id
+        self.routing_area_id = routing_area_id
+        self.subnet_id = subnet_id
+        self.hostname = hostname if hostname is not None else socket.gethostname()
+        self.last_nics = last_nics if last_nics is not None else []
+        self.nics = nics if nics is not None else []
+        self.last_processs = last_processs if last_processs is not None else []
+        self.processs = processs if processs is not None else []
+
+    def __str__(self):
+        return json.dumps(self.operating_system_2_json())
+
+    def operating_system_2_json(self):
+        last_nics_json = []
+        for nic in self.last_nics:
+            last_nics_json.append(nic.nic_2_json())
+        nics_json = []
+        for nic in self.nics:
+            nics_json.append(nic.nic_2_json())
+        last_processs_json = []
+        for process in self.last_processs:
+            last_processs_json.append(process.proc_2_json())
+        processs_json = []
+        for process in self.processs:
+            processs_json.append(process.proc_2_json())
+        json_obj = {
+            'hostname': self.hostname,
+            'last_nics': last_nics_json,
+            'nics': nics_json,
+            'last_processs': last_processs_json,
+            'processs': processs_json,
+            'container_id': self.container_id,
+            'osi_id': self.osi_id,
+            'datacenter_id': self.datacenter_id,
+            'routing_area_id': self.routing_area_id,
+            'subnet_id': self.subnet_id
+        }
+        return json_obj
+
+    @staticmethod
+    def json_2_operating_system(json_obj):
+        last_nics_json = json_obj['last_nics']
+        last_nics = []
+        for last_nic_json in last_nics_json:
+            last_nics.append(NetworkInterfaceCard.json_2_nic(last_nic_json))
+
+        nics_json = json_obj['nics']
+        nics = []
+        for nic_json in nics_json:
+            nics.append(NetworkInterfaceCard.json_2_nic(nic_json))
+
+        last_processs_json = json_obj['last_processs']
+        last_processs = []
+        for last_process in last_processs_json:
+            last_processs.append(Process.json_2_proc(last_process))
+
+        processs_json = json_obj['processs']
+        processs = []
+        for process in processs_json:
+            processs.append(Process.json_2_proc(process))
+
+        return OperatingSystem(
+            container_id=json_obj['container_id'], osi_id=json_obj['osi_id'], datacenter_id=json_obj['datacenter_id'],
+            routing_area_id=json_obj['routing_area_id'], subnet_id=json_obj['subnet_id'], hostname=json_obj['hostname'],
+            last_nics=last_nics, nics=nics, last_processs=last_processs, processs=processs
+        )
+
+    def update(self):
+        self.last_nics = copy.deepcopy(self.nics)
+        self.last_processs = copy.deepcopy(self.processs)
+        self.sniff()
+
+    def sniff(self):
         self.nics = []
         self.processs = []
 
-    def system_sniff(self):
-        self.nics = []
-        for nic_name_stat, snicstats in psutil.net_if_stats().__dict__.iteritems():
-            nic = NetworkInterfaceCard(name=nic_name_stat, duplex=snicstats.duplex,
+        for nic_name_stat, snicstats in psutil.net_if_stats().items():
+            nic = NetworkInterfaceCard(name=nic_name_stat,
+                                       duplex=NetworkInterfaceCard.duplex_2_string(snicstats.duplex),
                                        speed=snicstats.speed, mtu=snicstats.mtu)
-            for nic_name_snic, snic_table in psutil.net_if_addrs().__dict__.iteritems():
+            for nic_name_snic, snic_table in psutil.net_if_addrs().items():
                 if nic_name_snic == nic_name_stat:
                     for snic in snic_table:
                         if snic.family == socket.AddressFamily.AF_LINK:
@@ -95,8 +299,10 @@ class OperatingSystem(object):
                         elif snic.family == socket.AddressFamily.AF_INET:
                             nic.ipv4_address = snic.address
                             nic.ipv4_mask = snic.netmask
-                            #TO BE SOLVED : REVERSE DNS
-                            #socket.gethostbyaddr(snic.address)
+                            try:
+                                nic.ipv4_fqdn = socket.gethostbyaddr(snic.address)
+                            except socket.herror:
+                                nic.ipv4_fqdn = None
                         elif snic.family == socket.AddressFamily.AF_INET6:
                             #ARIANE SERVER DO NOT MANAGE IPv6 CURRENTLY
                             pass
@@ -104,22 +310,33 @@ class OperatingSystem(object):
                             pass
             self.nics.append(nic)
 
-        self.processs = []
         for pid in psutil.pids():
-            psutil_proc = psutil.Process(pid)
-            proc = Process(pid=pid, name=psutil_proc.name(), create_time=psutil_proc.create_time(),
-                           exe=psutil_proc.exe(), cwd=psutil_proc.cwd(), cmdLine=psutil_proc.cmdline(),
-                           username=psutil_proc.username(), cpu_affinity=psutil_proc.cpu_affinity(),
-                           terminal=psutil_proc.terminal(), uids=psutil_proc.uids().effective,
-                           gids=psutil_proc.gids().effective)
-            proc.connections = []
-            for connection in psutil_proc.connections():
-                conn = Connection(transport_protocol=connection.type, source_ip=connection.laddr[0],
-                                  source_port=connection.laddr[1], destination_ip=connection.raddr[0],
-                                  destination_port=connection.raddr[1], status=connection.status)
-                proc.connections.append(conn)
-            self.processs.append(proc)
-
-
-
-
+            try:
+                psutil_proc = psutil.Process(pid)
+                proc = Process(pid=pid, name=psutil_proc.name(), create_time=psutil_proc.create_time(),
+                               exe=psutil_proc.exe(), cwd=psutil_proc.cwd(), cmdline=psutil_proc.cmdline(),
+                               username=psutil_proc.username(),
+                               cpu_affinity=
+                               psutil_proc.cpu_affinity() if hasattr(psutil_proc, 'cpu_affinity') else None,
+                               terminal=psutil_proc.terminal(), uids=psutil_proc.uids().effective,
+                               gids=psutil_proc.gids().effective)
+                proc.connections = []
+                for connection in psutil_proc.connections():
+                    if connection.status == psutil.CONN_LISTEN or connection.status == psutil.CONN_NONE \
+                            or connection.status == psutil.CONN_CLOSE:
+                        conn = Connection(family=Connection.family_2_string(connection.family),
+                                          type=Connection.type_2_string(connection.type),
+                                          source_ip=connection.laddr[0], source_port=connection.laddr[1],
+                                          status=connection.status)
+                    else:
+                        conn = Connection(family=Connection.family_2_string(connection.family),
+                                          type=Connection.type_2_string(connection.type),
+                                          source_ip=connection.laddr[0], source_port=connection.laddr[1],
+                                          destination_ip=connection.raddr[0], destination_port=connection.raddr[1],
+                                          status=connection.status)
+                    proc.connections.append(conn)
+                self.processs.append(proc)
+            except psutil.AccessDenied:
+                pass
+            except PermissionError:
+                pass
