@@ -39,12 +39,14 @@ class SystemComponent(InjectorComponentSkeleton):
             data_blob=''
         )
         self.operating_system = OperatingSystem()
+        self.operating_system.sniff()
         self.version = 0
 
     def data_blob(self):
         return self.operating_system.operating_system_2_json()
 
     def sniff(self):
+        self.cache(refreshing=True, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
         self.operating_system.update()
-        self.cache(data_blob=self.data_blob())
+        self.cache(refreshing=False, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
         self.version += 1
