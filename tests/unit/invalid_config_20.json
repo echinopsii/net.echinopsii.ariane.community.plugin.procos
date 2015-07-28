@@ -1,0 +1,12 @@
+{
+    "ariane_server": {
+        "rest_base_url": "http://localhost:6969/ariane/",
+        "rest_user": "yoda",
+        "rest_password": "secret",
+        "rbmq_host": "localhost",
+        "rbmq_port": 5672,
+        "rbmq_user": "ariane",
+        "rbmq_password": "password",
+        "rbmq_vhost": "/ariane"
+    }
+}

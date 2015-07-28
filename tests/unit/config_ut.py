@@ -19,7 +19,7 @@ class ConfigurationTest(unittest.TestCase):
 
     def test_ariane_good_conf(self):
         try:
-            Config().parse("valid_config.ini")
+            config = Config().parse("valid_config.json")
         except Exception as e:
             self.fail('unexpected exception thrown: ' + str(e))
         else:
@@ -27,7 +27,7 @@ class ConfigurationTest(unittest.TestCase):
 
     def test_ariane_server_not_in_conf_file(self):
         try:
-            Config().parse("invalid_config_10.ini")
+            Config().parse("invalid_config_10.json")
         except exceptions.ArianeProcOSConfigMandatorySectionMissingError:
             pass
         except Exception as e:
@@ -37,7 +37,7 @@ class ConfigurationTest(unittest.TestCase):
 
     def test_ariane_server_missing_mandatory_fields(self):
         try:
-            Config().parse("invalid_config_11.ini")
+            Config().parse("invalid_config_11.json")
         except exceptions.ArianeProcOSConfigMandatoryFieldsMissingError:
             pass
         except Exception as e:
@@ -46,7 +46,7 @@ class ConfigurationTest(unittest.TestCase):
             self.fail('no exception thrown')
 
         try:
-            Config().parse("invalid_config_12.ini")
+            Config().parse("invalid_config_12.json")
         except exceptions.ArianeProcOSConfigMandatoryFieldsMissingError:
             pass
         except Exception as e:
@@ -56,7 +56,7 @@ class ConfigurationTest(unittest.TestCase):
 
     def test_ariane_procos_not_in_conf_file(self):
         try:
-            Config().parse("invalid_config_20.ini")
+            Config().parse("invalid_config_20.json")
         except exceptions.ArianeProcOSConfigMandatorySectionMissingError:
             pass
         except Exception as e:
@@ -66,7 +66,7 @@ class ConfigurationTest(unittest.TestCase):
 
     def test_ariane_procos_missing_mandatory_fields(self):
         try:
-            Config().parse("invalid_config_21.ini")
+            Config().parse("invalid_config_21.json")
         except exceptions.ArianeProcOSConfigMandatoryFieldsMissingError:
             pass
         except Exception as e:
@@ -76,7 +76,7 @@ class ConfigurationTest(unittest.TestCase):
 
     def test_ariane_procos_bad_sleeping_period_value(self):
         try:
-            Config().parse("invalid_config_22.ini")
+            Config().parse("invalid_config_22.json")
         except exceptions.ArianeProcOSConfigMandatoryFieldsValueError:
             pass
         except Exception as e:

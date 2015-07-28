@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import configparser
+import json
 import os
 from ariane_procos import exceptions
 
@@ -36,15 +37,35 @@ class Config(object):
         self.rbmq_vhost = None
 
         self.sleeping_period = None
+
         self.datacenter_name = None
-        self.routing_area = None
+        self.datacenter_description = None
+        self.datacenter_address = None
+        self.datacenter_zipcode = None
+        self.datacenter_town = None
+        self.datacenter_country = None
+        self.datacenter_gps_lat = None
+        self.datacenter_gps_lng = None
+
+        self.routing_area_name = None
+        self.routing_area_multicast = None
+        self.routing_area_type = None
+        self.routing_area_description = None
+
+        self.subnet_name = None
+        self.subnet_description = None
+
+        self.osi_description = None
+        self.osi_admin_gate_uri_proto = None
+        self.environment = None
+        self.team = None
 
     def parse(self, config_file):
         if not os.path.isfile(config_file):
             raise exceptions.ArianeProcOSConfigFileError(config_file)
 
-        config = configparser.ConfigParser()
-        config.read(config_file)
+        config_file = open(config_file, 'r')
+        config = json.load(config_file)
 
         ariane_server_missing_fields = []
         if 'ariane_server' in config:
@@ -99,7 +120,26 @@ class Config(object):
 
             if ariane_procos_missing_fields.__len__() == 0:
                 self.datacenter_name = config['ariane_procos']['datacenter_name']
-                self.routing_area = config['ariane_procos']['routing_area']
+                self.datacenter_description = config['ariane_procos']['datacenter_description']
+                self.datacenter_address = config['ariane_procos']['datacenter_address']
+                self.datacenter_zipcode = config['ariane_procos']['datacenter_zipcode']
+                self.datacenter_town = config['ariane_procos']['datacenter_town']
+                self.datacenter_country = config['ariane_procos']['datacenter_country']
+                self.datacenter_gps_lat = config['ariane_procos']['datacenter_gps_lat']
+                self.datacenter_gps_lng = config['ariane_procos']['datacenter_gps_lng']
+
+                self.routing_area_name = config['ariane_procos']['routing_area_name']
+                self.routing_area_multicast = config['ariane_procos']['routing_area_multicast']
+                self.routing_area_type = config['ariane_procos']['routing_area_type']
+                self.routing_area_description = config['ariane_procos']['routing_area_description']
+
+                self.subnet_name = config['ariane_procos']['subnet_name']
+                self.subnet_description = config['ariane_procos']['subnet_description']
+
+                self.osi_description = config['ariane_procos']['osi_description']
+                self.osi_admin_gate_uri_proto = config['ariane_procos']['osi_admin_gate_uri_proto']
+                self.environment = config['ariane_procos']['environment']
+                self.team = config['ariane_procos']['team']
         else:
             raise exceptions.ArianeProcOSConfigMandatorySectionMissingError('ariane_server')
 

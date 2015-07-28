@@ -1,0 +1,33 @@
+{
+    "ariane_server": {
+        "rest_base_url": "http://localhost:6969/ariane/",
+        "rest_user": "",
+        "rest_password": "secret",
+        "rbmq_host": "localhost",
+        "rbmq_port": 5672,
+        "rbmq_user": "ariane",
+        "rbmq_password": "password",
+        "rbmq_vhost": "/ariane"
+    },
+    "ariane_procos": {
+        "sleeping_period": 60,
+        "datacenter_name": "CPE-lyon",
+        "datacenter_description": "CPE Lyon School",
+        "datacenter_address": "1, rue Victor Grignard",
+        "datacenter_zipcode": 69100,
+        "datacenter_town": "Villeurbanne",
+        "datacenter_country": "France",
+        "datacenter_gps_lat": 45.784094,
+        "datacenter_gps_lng": 4.869040,
+        "routing_area_name": "cpe-hp",
+        "routing_area_multicast": "FILTERED",
+        "routing_area_type": "LAN",
+        "routing_area_description": "CPE HP routing area",
+        "subnet_name": "CPE HP wifi",
+        "subnet_description": "CPE HP wifi subnet",
+        "osi_description": "Personal mcbook pro",
+        "osi_admin_gate_uri_proto": "ssh://",
+        "environment": "DEV",
+        "team": "ARops"
+    }
+}
