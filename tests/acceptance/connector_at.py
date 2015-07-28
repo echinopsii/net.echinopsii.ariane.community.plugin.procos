@@ -10,7 +10,7 @@ __author__ = 'mffrench'
 class ArianeConnectorTest(unittest.TestCase):
 
     def setUp(self):
-        self.config = Config().parse("valid_config.ini")
+        self.config = Config().parse("valid_config.json")
         client_properties = {
             'product': 'Ariane Plugin ProcOS Test',
             'information': 'Ariane Plugin ProcOS Test - Acceptance test on ariane_connector',
