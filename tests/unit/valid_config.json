@@ -11,24 +11,103 @@
     },
     "ariane_procos": {
         "sleeping_period": 60,
-        "datacenter_name": "CPE-lyon",
-        "datacenter_description": "CPE Lyon School",
-        "datacenter_address": "1, rue Victor Grignard",
-        "datacenter_zipcode": 69100,
-        "datacenter_town": "Villeurbanne",
-        "datacenter_country": "France",
-        "datacenter_gps_lat": 45.784094,
-        "datacenter_gps_lng": 4.869040,
-        "routing_area_name": "cpe-hp",
-        "routing_area_multicast": "FILTERED",
-        "routing_area_type": "LAN",
-        "routing_area_description": "CPE HP routing area",
-        "subnet_name": "CPE HP wifi",
-        "subnet_description": "CPE HP wifi subnet",
-        "osi_description": "Personal mcbook pro",
-        "osi_admin_gate_uri_proto": "ssh://",
-        "environment": "DEV",
-        "team": "ARops"
+        "potential_datacenters": [
+            {
+                "name": "CPE-lyon",
+                "description": "CPE Lyon School",
+                "address": "1, rue Victor Grignard",
+                "zipcode": 69100,
+                "town": "Villeurbanne",
+                "country": "France",
+                "gps_lat": 45.784094,
+                "gps_lng": 4.869040,
+                "routing_areas": [
+                    {
+                        "name": "cpe-hp",
+                        "multicast": "FILTERED",
+                        "type": "LAN",
+                        "description": "CPE HP routing area",
+                        "subnets": [
+                            {
+                                "name": "CPE HP wifi",
+                                "description": "CPE HP wifi subnet",
+                                "subnet_ip": "",
+                                "subnet_mask": ""
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Mez",
+                "description": "Ma maison",
+                "address": "26 rue de Belfort",
+                "zipcode": 92400,
+                "town": "Courbevoie",
+                "country": "France",
+                "gps_lat": 48.895327,
+                "gps_lng": 2.246610,
+                "routing_areas": [
+                    {
+                        "name": "Free",
+                        "multicast": "NOLIMIT",
+                        "type": "LAN",
+                        "description": "Free routing area",
+                        "subnets": [
+                            {
+                                "name": "Free Lan",
+                                "description": "Free Lan subnet",
+                                "subnet_ip": "192.169.1.0",
+                                "subnet_mask": "255.255.255.0"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "WAI",
+                "description": "WAI By BNP",
+                "address": "19 Boulevard Poissoniere",
+                "zipcode": 75002,
+                "town": "Paris",
+                "country": "France",
+                "gps_lat": 48.871356,
+                "gps_lng": 2.344636,
+                "routing_areas": [
+                    {
+                        "name": "WAI",
+                        "multicast": "FILTERED",
+                        "type": "LAN",
+                        "description": "WAI routing area",
+                        "subnets": [
+                            {
+                                "name": "WAI wifi",
+                                "description": "WAI wifi subnet",
+                                "subnet_ip": "192.168.7.0",
+                                "subnet_mask": "255.255.255.0"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "system_context": {
+            "description": "Personal mcbook pro",
+            "admin_gate_proto": "ssh://",
+            "embedding_osi_hostname": "",
+            "type": "OS X Yosemite 10.10"
+        },
+        "organization_context": {
+            "environment": {
+                "name": "DEV",
+                "description": "DEV environment"
+            },
+            "team": {
+                "name": "ARdev",
+                "color_code": "cc6c4a",
+                "description": "Ariane DEV team"
+            }
+        }
     }
 }
 

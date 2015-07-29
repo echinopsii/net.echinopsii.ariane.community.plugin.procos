@@ -23,8 +23,64 @@ from ariane_procos import exceptions
 __author__ = 'mffrench'
 
 
-class Config(object):
+class EnvironmentConfig(object):
+    def __init__(self, name=None, description = None):
+        self.name = name
+        self.description = description = description
 
+
+class TeamConfig(object):
+    def __init__(self, name, color_code, description):
+        self.name = name
+        self.color_code = color_code
+        self.description = description
+
+
+class OrganizationContextConfig(object):
+    def __init__(self, team=None, environment=None):
+        self.team = team
+        self.environment = environment
+
+
+class SystemContextConfig(object):
+    def __init__(self, description=None, admin_gate_protocol=None, embedding_osi_hostname=None):
+        self.description = description
+        self.admin_gate_protocol = admin_gate_protocol
+        self.embedding_osi_hostname = embedding_osi_hostname
+
+
+class SubnetConfig(object):
+    def __init__(self, name=None, description=None, subnet_ip=None, subnet_mask=None):
+        self.name = name
+        self.description = description
+        self.subnet_ip = subnet_ip
+        self.subnet_mask = subnet_mask
+
+
+class RoutingAreaConfig(object):
+    def __init__(self, name=None, description=None, multicast=None, ra_type=None):
+        self.name = name
+        self.description = description
+        self.multicast = multicast
+        self.type = ra_type
+        self.subnets = []
+
+
+class DatacenterConfig(object):
+    def __init__(self, name=None, description=None, address=None, zipcode=None, town=None, country=None,
+                 gps_lat=None, gps_lng=None):
+        self.name = name
+        self.description = description
+        self.address = address
+        self.zipcode = zipcode
+        self.town = town
+        self.country = country
+        self.gps_lat = gps_lat
+        self.gps_lng = gps_lng
+        self.routing_areas = []
+
+
+class Config(object):
     def __init__(self):
         self.rest_base_url = None
         self.rest_user = None
@@ -38,27 +94,11 @@ class Config(object):
 
         self.sleeping_period = None
 
-        self.datacenter_name = None
-        self.datacenter_description = None
-        self.datacenter_address = None
-        self.datacenter_zipcode = None
-        self.datacenter_town = None
-        self.datacenter_country = None
-        self.datacenter_gps_lat = None
-        self.datacenter_gps_lng = None
-
-        self.routing_area_name = None
-        self.routing_area_multicast = None
-        self.routing_area_type = None
-        self.routing_area_description = None
-
-        self.subnet_name = None
-        self.subnet_description = None
-
-        self.osi_description = None
-        self.osi_admin_gate_uri_proto = None
-        self.environment = None
-        self.team = None
+        #List of possible datacenters this OS instance could be located with routing area and subnets
+        #(labtop of VM which can move through an hypervisor)
+        self.potential_datacenters = []
+        self.system_context = None
+        self.organisation_context = None
 
     def parse(self, config_file):
         if not os.path.isfile(config_file):
@@ -119,27 +159,59 @@ class Config(object):
                                                                                  'should be an integer !')
 
             if ariane_procos_missing_fields.__len__() == 0:
-                self.datacenter_name = config['ariane_procos']['datacenter_name']
-                self.datacenter_description = config['ariane_procos']['datacenter_description']
-                self.datacenter_address = config['ariane_procos']['datacenter_address']
-                self.datacenter_zipcode = config['ariane_procos']['datacenter_zipcode']
-                self.datacenter_town = config['ariane_procos']['datacenter_town']
-                self.datacenter_country = config['ariane_procos']['datacenter_country']
-                self.datacenter_gps_lat = config['ariane_procos']['datacenter_gps_lat']
-                self.datacenter_gps_lng = config['ariane_procos']['datacenter_gps_lng']
+                if config['ariane_procos']['potential_datacenters'] is not None:
+                    for datacenter in config['ariane_procos']['potential_datacenters']:
+                        datacenter_config = DatacenterConfig(
+                            name=datacenter['name'],
+                            description=datacenter['description'],
+                            address=datacenter['address'],
+                            zipcode=datacenter['zipcode'],
+                            town=datacenter['town'],
+                            country=datacenter['country'],
+                            gps_lat=datacenter['gps_lat'],
+                            gps_lng=datacenter['gps_lng']
+                        )
+                        for routing_area in datacenter['routing_areas']:
+                            routing_area_config = RoutingAreaConfig(
+                                name=routing_area['name'],
+                                description=routing_area['description'],
+                                multicast=routing_area['multicast'],
+                                ra_type=routing_area['type']
+                            )
+                            for subnet in routing_area['subnets']:
+                                subnet_config = SubnetConfig(
+                                    name=subnet['name'],
+                                    description=subnet['description'],
+                                    subnet_ip=subnet['subnet_ip'],
+                                    subnet_mask=subnet['subnet_mask']
+                                )
+                                routing_area_config.subnets.append(subnet_config)
+                            datacenter_config.routing_areas.append(routing_area_config)
+                        self.potential_datacenters.append(datacenter_config)
 
-                self.routing_area_name = config['ariane_procos']['routing_area_name']
-                self.routing_area_multicast = config['ariane_procos']['routing_area_multicast']
-                self.routing_area_type = config['ariane_procos']['routing_area_type']
-                self.routing_area_description = config['ariane_procos']['routing_area_description']
+                if config['ariane_procos']['system_context'] is not None:
+                    self.system_context = SystemContextConfig(
+                        description=config['ariane_procos']['system_context']['description'],
+                        admin_gate_protocol=config['ariane_procos']['system_context']['admin_gate_proto'],
+                        embedding_osi_hostname=config['ariane_procos']['system_context']['embedding_osi_hostname']
+                    )
 
-                self.subnet_name = config['ariane_procos']['subnet_name']
-                self.subnet_description = config['ariane_procos']['subnet_description']
+                if config['ariane_procos']['organization_context'] is not None:
+                    team = None
+                    environment = None
+                    if config['ariane_procos']['organization_context']['team']:
+                        team = TeamConfig(
+                            name=config['ariane_procos']['organization_context']['team']['name'],
+                            color_code=config['ariane_procos']['organization_context']['team']['color_code'],
+                            description=config['ariane_procos']['organization_context']['team']['description']
+                        )
+                    if config['ariane_procos']['organization_context']['environment'] is not None:
+                        environment = EnvironmentConfig(
+                            name=config['ariane_procos']['organization_context']['environment']['name'],
+                            description=config['ariane_procos']['organization_context']['environment']['description']
+                        )
+                    self.organisation_context = OrganizationContextConfig(team=team, environment=environment)
 
-                self.osi_description = config['ariane_procos']['osi_description']
-                self.osi_admin_gate_uri_proto = config['ariane_procos']['osi_admin_gate_uri_proto']
-                self.environment = config['ariane_procos']['environment']
-                self.team = config['ariane_procos']['team']
         else:
             raise exceptions.ArianeProcOSConfigMandatorySectionMissingError('ariane_server')
 
