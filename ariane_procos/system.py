@@ -207,13 +207,13 @@ class NetworkInterfaceCard(object):
 
 
 class OperatingSystem(object):
-    def __init__(self, container_id=None, osi_id=None, datacenter_id=None, routing_area_id=None,
-                 subnet_id=None, hostname=None, last_nics=None, nics=None, last_processs=None, processs=None):
+    def __init__(self, container_id=None, osi_id=None, datacenter_id=None, routing_area_ids=None,
+                 subnet_ids=None, hostname=None, last_nics=None, nics=None, last_processs=None, processs=None):
         self.container_id = container_id
         self.osi_id = osi_id
         self.datacenter_id = datacenter_id
-        self.routing_area_id = routing_area_id
-        self.subnet_id = subnet_id
+        self.routing_area_ids = routing_area_ids
+        self.subnet_ids = subnet_ids
         self.hostname = hostname if hostname is not None else socket.gethostname()
         self.last_nics = last_nics if last_nics is not None else []
         self.nics = nics if nics is not None else []
@@ -245,8 +245,8 @@ class OperatingSystem(object):
             'container_id': self.container_id,
             'osi_id': self.osi_id,
             'datacenter_id': self.datacenter_id,
-            'routing_area_id': self.routing_area_id,
-            'subnet_id': self.subnet_id
+            'routing_area_ids': self.routing_area_ids,
+            'subnet_ids': self.subnet_ids
         }
         return json_obj
 
@@ -274,8 +274,9 @@ class OperatingSystem(object):
 
         return OperatingSystem(
             container_id=json_obj['container_id'], osi_id=json_obj['osi_id'], datacenter_id=json_obj['datacenter_id'],
-            routing_area_id=json_obj['routing_area_id'], subnet_id=json_obj['subnet_id'], hostname=json_obj['hostname'],
-            last_nics=last_nics, nics=nics, last_processs=last_processs, processs=processs
+            routing_area_ids=json_obj['routing_area_ids'], subnet_ids=json_obj['subnet_ids'],
+            hostname=json_obj['hostname'], last_nics=last_nics, nics=nics, last_processs=last_processs,
+            processs=processs
         )
 
     def update(self):
