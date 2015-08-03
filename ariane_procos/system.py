@@ -305,9 +305,11 @@ class OperatingSystem(object):
                             nic.ipv4_address = snic.address
                             nic.ipv4_mask = snic.netmask
                             try:
-                                nic.ipv4_fqdn = socket.gethostbyaddr(snic.address)
+                                nic.ipv4_fqdn = socket.gethostbyaddr(snic.address)[0]
+                                if nic.ipv4_fqdn == 'localhost' or nic.ipv4_fqdn == socket.gethostname():
+                                    nic.ipv4_fqdn = nic_name_stat + '.' + socket.gethostname()
                             except socket.herror:
-                                nic.ipv4_fqdn = None
+                                nic.ipv4_fqdn = nic_name_stat + '.' + socket.gethostname()
                         elif snic.family == socket.AddressFamily.AF_INET6:
                             #ARIANE SERVER DO NOT MANAGE IPv6 CURRENTLY
                             pass
