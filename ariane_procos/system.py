@@ -42,6 +42,18 @@ class Connection(object):
     def __str__(self):
         return json.dumps(self.connection_2_json())
 
+    def __eq__(self, other):
+        if self.family != other.family or self.type != other.type or self.source_ip != other.source_ip\
+                or self.source_port != other.source_port or self.destination_ip != other.destination_ip\
+                or self.destination_port != other.destination_port \
+                or self.destination_osi_id != other.destination_osi_id\
+                or self.destination_subnet_id != other.destination_subnet_id\
+                or self.destination_routing_area_id != other.destination_routing_area_id\
+                or self.destination_datacenter_id != other.destination_datacenter_id:
+            return False
+        else:
+            return True
+
     def connection_2_json(self):
         json_obj = {
             'status': self.status,
@@ -113,6 +125,16 @@ class Process(object):
         self.uids = uids
         self.gids = gids
 
+    def __eq__(self, other):
+        if self.mapping_id != other.mapping_id or self.is_node != other.is_node or self.pid != other.pid\
+                or self.name != other.name or self.create_time != other.create_time or self.exe != other.exe\
+                or self.cwd != other.cwd or self.cmdline != other.cmdline or self.username != other.username\
+                or self.cpu_affinity != other.cpu_affinity or self.terminal != other.terminal\
+                or self.connections != other.connections or self.uids != other.uids or self.gids != other.gids:
+            return False
+        else:
+            return True
+
     def __str__(self):
         return json.dumps(self.proc_2_json())
 
@@ -172,6 +194,15 @@ class NetworkInterfaceCard(object):
         self.ipv4_mask = ipv4_mask
         self.ipv4_fqdn = ipv4_fqdn
 
+    def __eq__(self, other):
+        if self.nic_id != other.nic_id or self.name != other.name or self.mac_address != other.mac_address\
+                or self.duplex != other.duplex or self.speed != other.speed or self.mtu != other.mtu\
+                or self.ipv4_id != other.ipv4_id or self.ipv4_address != other.ipv4_address\
+                or self.ipv4_mask != other.ipv4_mac or self.ipv4_fqdn != other.ipv4_fqdn:
+            return False
+        else:
+            return True
+
     def __str__(self):
         return json.dumps(self.nic_2_json())
 
@@ -212,20 +243,37 @@ class NetworkInterfaceCard(object):
 
 class OperatingSystem(object):
     def __init__(self, container_id=None, osi_id=None, datacenter_id=None, routing_area_ids=None,
-                 subnet_ids=None, hostname=None, last_nics=None, nics=None, last_processs=None, processs=None):
+                 subnet_ids=None, environment_id=None, team_id=None,
+                 hostname=None, last_nics=None, nics=None, last_processs=None, processs=None):
         self.container_id = container_id
+
         self.osi_id = osi_id
         self.datacenter_id = datacenter_id
         self.routing_area_ids = routing_area_ids
         self.subnet_ids = subnet_ids
+        self.environment_id = environment_id
+        self.team_id = team_id
+
         self.hostname = hostname if hostname is not None else socket.gethostname()
         self.last_nics = last_nics if last_nics is not None else []
         self.nics = nics if nics is not None else []
         self.last_processs = last_processs if last_processs is not None else []
         self.processs = processs if processs is not None else []
 
+    def __eq__(self, other):
+        if self.osi_id != other.osi_id or self.hostname != other.hostname:
+            return False
+        else:
+            return True
+
     def __str__(self):
         return json.dumps(self.operating_system_2_json())
+
+    def need_directories_refresh(self):
+        if self.last_nics != self.nics:
+            return True
+        else:
+            return False
 
     def operating_system_2_json(self):
         last_nics_json = []

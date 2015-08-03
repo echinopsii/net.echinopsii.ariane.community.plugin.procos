@@ -28,6 +28,12 @@ class EnvironmentConfig(object):
         self.name = name
         self.description = description = description
 
+    def __eq__(self, other):
+        if self.name != other.name:
+            return False
+        else:
+            return True
+
 
 class TeamConfig(object):
     def __init__(self, name, color_code, description):
@@ -35,11 +41,23 @@ class TeamConfig(object):
         self.color_code = color_code
         self.description = description
 
+    def __eq__(self, other):
+        if self.name != other.name:
+            return False
+        else:
+            return True
+
 
 class OrganizationContextConfig(object):
     def __init__(self, team=None, environment=None):
         self.team = team
         self.environment = environment
+
+    def __eq__(self, other):
+        if self.team != other.team or self.environment != other.environment:
+            return False
+        else:
+            return True
 
 
 class SystemContextConfig(object):
@@ -56,6 +74,12 @@ class SubnetConfig(object):
         self.subnet_ip = subnet_ip
         self.subnet_mask = subnet_mask
 
+    def __eq__(self, other):
+        if self.name != other.name:
+            return False
+        else:
+            return True
+
 
 class RoutingAreaConfig(object):
     def __init__(self, name=None, description=None, multicast=None, ra_type=None):
@@ -64,6 +88,12 @@ class RoutingAreaConfig(object):
         self.multicast = multicast
         self.type = ra_type
         self.subnets = []
+
+    def __eq__(self, other):
+        if self.name != other.name:
+            return False
+        else:
+            return True
 
 
 class DatacenterConfig(object):
@@ -78,6 +108,12 @@ class DatacenterConfig(object):
         self.gps_lat = gps_lat
         self.gps_lng = gps_lng
         self.routing_areas = []
+
+    def __eq__(self, other):
+        if self.name != other.name:
+            return False
+        else:
+            return True
 
 
 class Config(object):
