@@ -19,7 +19,7 @@ import socket
 import threading
 import time
 from ariane_clip3.directory import DatacenterService, Datacenter, RoutingAreaService, RoutingArea, OSInstanceService, \
-    OSInstance, SubnetService, Subnet
+    OSInstance, SubnetService, Subnet, IPAddressService, IPAddress
 from ariane_clip3.injector import InjectorGearSkeleton
 from components import SystemComponent
 
@@ -167,7 +167,18 @@ class DirectoryGear(InjectorGearSkeleton):
                         if subnet_ip != '127.0.0.0':
                             for subnet in self.subnets:
                                 if subnet_ip == subnet.ip and subnet_mask == subnet.mask:
-                                    pass
+                                    ip_address = IPAddressService.find_ip_address(nic.ipv4_address, subnet.id)
+                                    if ip_address is None:
+                                        ip_address = IPAddress(ip_address=nic.ipv4_address, fqdn=nic.ipv4_fqdn,
+                                                               ipa_subnet_id=subnet.id, ipa_osi_id=self.osi.id)
+                                        self.osi.sync()
+                                        subnet.sync()
+                                    else:
+                                        if ip_address.ipa_os_instance_id != self.osi.id:
+                                            ip_address.ipa_os_instance_id = self.osi.id
+                                            ip_address.save()
+                        else:
+                            pass
 
                 except Exception as e:
                     print(e.__str__())
@@ -208,7 +219,7 @@ class DirectoryGear(InjectorGearSkeleton):
                             os_subnet.save()
                         operating_system.subnet_id = os_subnet.id
                         datacenter_config.add_subnet(os_subnet)
-                    osi.add_subnet(os_subnet)
+                    self.osi.add_subnet(os_subnet)
             except Exception as e:
                 print(e.__str__())
                 pass

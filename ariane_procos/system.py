@@ -19,17 +19,16 @@ import copy
 import json
 import socket
 import psutil
-from psutil._common import NicDuplex
 
 __author__ = 'mffrench'
 
 
 class Connection(object):
-    def __init__(self, family=None, type=None, source_ip=None, source_port=None,
+    def __init__(self, family=None, rtype=None, source_ip=None, source_port=None,
                  destination_ip=None, destination_port=None, destination_osi_id=None, destination_subnet_id=None,
                  destination_routing_area_id=None, destination_datacenter_id=None, status=None):
         self.family = family
-        self.type = type
+        self.type = rtype
         self.source_ip = source_ip
         self.source_port = source_port
         self.destination_ip = destination_ip
@@ -64,7 +63,7 @@ class Connection(object):
         return Connection(
             status=json_obj['status'],
             family=json_obj['family'],
-            type=json_obj['type'],
+            rtype=json_obj['type'],
             source_ip=json_obj['source_ip'],
             source_port=json_obj['source_port'],
             destination_ip=json_obj['destination_ip'],
@@ -153,6 +152,12 @@ class Process(object):
                        gids=json_obj['gids'], mapping_id=json_obj['mapping_id'], is_node=json_obj['is_node'])
 
 
+class NicDuplex(object):
+    NIC_DUPLEX_FULL = 2
+    NIC_DUPLEX_HALF = 1
+    NIC_DUPLEX_UNKNOWN = 0
+
+
 class NetworkInterfaceCard(object):
     def __init__(self, nic_id=None, name=None, mac_address=None, duplex=None, speed=None, mtu=None,
                  ipv4_id=None, ipv4_address=None, ipv4_mask=None, ipv4_fqdn=None):
@@ -192,7 +197,6 @@ class NetworkInterfaceCard(object):
                                     speed=json_obj['speed'], mtu=json_obj['mtu'],
                                     ipv4_address=json_obj['ipv4_address'], ipv4_mask=json_obj['ipv4_mask'],
                                     ipv4_fqdn=json_obj['ipv4_fqdn'], ipv4_id=json_obj['ipv4_id'])
-
 
     @staticmethod
     def duplex_2_string(duplex):
@@ -326,18 +330,16 @@ class OperatingSystem(object):
                     if connection.status == psutil.CONN_LISTEN or connection.status == psutil.CONN_NONE \
                             or connection.status == psutil.CONN_CLOSE:
                         conn = Connection(family=Connection.family_2_string(connection.family),
-                                          type=Connection.type_2_string(connection.type),
+                                          rtype=Connection.type_2_string(connection.type),
                                           source_ip=connection.laddr[0], source_port=connection.laddr[1],
                                           status=connection.status)
                     else:
                         conn = Connection(family=Connection.family_2_string(connection.family),
-                                          type=Connection.type_2_string(connection.type),
+                                          rtype=Connection.type_2_string(connection.type),
                                           source_ip=connection.laddr[0], source_port=connection.laddr[1],
                                           destination_ip=connection.raddr[0], destination_port=connection.raddr[1],
                                           status=connection.status)
                     proc.connections.append(conn)
                 self.processs.append(proc)
             except psutil.AccessDenied:
-                pass
-            except PermissionError:
                 pass
