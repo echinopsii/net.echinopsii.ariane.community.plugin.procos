@@ -182,7 +182,7 @@ class NicDuplex(object):
 
 class NetworkInterfaceCard(object):
     def __init__(self, nic_id=None, name=None, mac_address=None, duplex=None, speed=None, mtu=None,
-                 ipv4_id=None, ipv4_address=None, ipv4_mask=None, ipv4_fqdn=None):
+                 ipv4_id=None, ipv4_address=None, ipv4_mask=None, ipv4_broadcast=None, ipv4_fqdn=None):
         self.nic_id = nic_id
         self.name = name
         self.mac_address = mac_address
@@ -192,13 +192,15 @@ class NetworkInterfaceCard(object):
         self.ipv4_id = ipv4_id
         self.ipv4_address = ipv4_address
         self.ipv4_mask = ipv4_mask
+        self.ipv4_broadcast = ipv4_broadcast
         self.ipv4_fqdn = ipv4_fqdn
 
     def __eq__(self, other):
         if self.nic_id != other.nic_id or self.name != other.name or self.mac_address != other.mac_address\
                 or self.duplex != other.duplex or self.speed != other.speed or self.mtu != other.mtu\
                 or self.ipv4_id != other.ipv4_id or self.ipv4_address != other.ipv4_address\
-                or self.ipv4_mask != other.ipv4_mac or self.ipv4_fqdn != other.ipv4_fqdn:
+                or self.ipv4_mask != other.ipv4_mac or self.ipv4_fqdn != other.ipv4_fqdn\
+                or self.ipv4_broadcast != other.ipv4_broadcast:
             return False
         else:
             return True
@@ -208,6 +210,8 @@ class NetworkInterfaceCard(object):
 
     def nic_2_json(self):
         json_obj = {
+            'nic_id': self.nic_id,
+            'ipv4_id': self.ipv4_id,
             'name': self.name,
             'mac_address': self.mac_address,
             'duplex': self.duplex,
@@ -215,9 +219,8 @@ class NetworkInterfaceCard(object):
             'mtu': self.mtu,
             'ipv4_address': self.ipv4_address,
             'ipv4_mask': self.ipv4_mask,
-            'ipv4_fqdn': self.ipv4_fqdn,
-            'nic_id': self.nic_id,
-            'ipv4_id': self.ipv4_id
+            'ipv4_broadcast': self.ipv4_broadcast,
+            'ipv4_fqdn': self.ipv4_fqdn
         }
         return json_obj
 
@@ -227,7 +230,8 @@ class NetworkInterfaceCard(object):
                                     mac_address=json_obj['mac_address'], duplex=json_obj['duplex'],
                                     speed=json_obj['speed'], mtu=json_obj['mtu'],
                                     ipv4_address=json_obj['ipv4_address'], ipv4_mask=json_obj['ipv4_mask'],
-                                    ipv4_fqdn=json_obj['ipv4_fqdn'], ipv4_id=json_obj['ipv4_id'])
+                                    ipv4_broadcast=json_obj['ipv4_broadcast'], ipv4_fqdn=json_obj['ipv4_fqdn'],
+                                    ipv4_id=json_obj['ipv4_id'])
 
     @staticmethod
     def duplex_2_string(duplex):
@@ -347,11 +351,12 @@ class OperatingSystem(object):
             for nic_name_snic, snic_table in psutil.net_if_addrs().items():
                 if nic_name_snic == nic_name_stat:
                     for snic in snic_table:
-                        if snic.family == socket.AddressFamily.AF_LINK:
+                        if snic.family == psutil.AF_LINK:
                             nic.mac_address = snic.address
                         elif snic.family == socket.AddressFamily.AF_INET:
                             nic.ipv4_address = snic.address
                             nic.ipv4_mask = snic.netmask
+                            nic.ipv4_broadcast = snic.broadcast
                             try:
                                 nic.ipv4_fqdn = socket.gethostbyaddr(snic.address)[0]
                                 if nic.ipv4_fqdn == 'localhost' or nic.ipv4_fqdn == socket.gethostname():
