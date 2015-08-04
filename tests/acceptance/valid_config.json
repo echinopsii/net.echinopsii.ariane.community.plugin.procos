@@ -10,7 +10,7 @@
         "rbmq_vhost": "/ariane"
     },
     "ariane_procos": {
-        "sleeping_period": 180,
+        "sleeping_period": 10,
         "potential_datacenters": [
             {
                 "name": "CPE-lyon",
@@ -49,15 +49,29 @@
                 "gps_lng": 2.246610,
                 "routing_areas": [
                     {
-                        "name": "Free",
+                        "name": "Free@Mez",
                         "multicast": "NOLIMIT",
                         "type": "LAN",
                         "description": "Free routing area",
                         "subnets": [
                             {
-                                "name": "Free Lan",
-                                "description": "Free Lan subnet",
+                                "name": "Free",
+                                "description": "Main Free subnet",
                                 "subnet_ip": "192.169.1.0",
+                                "subnet_mask": "255.255.255.0"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "DekatonshivrVPN@Mez",
+                        "multicast": "FILTERED",
+                        "type": "VPN",
+                        "description": "Dekatonshivr VPN routing area",
+                        "subnets": [
+                            {
+                                "name": "Dekatonshivr VPN",
+                                "description": "Dekatonshivr VPN access subnet",
+                                "subnet_ip": "10.8.0.0",
                                 "subnet_mask": "255.255.255.0"
                             }
                         ]

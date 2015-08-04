@@ -66,12 +66,15 @@ class DirectoryGear(InjectorGearSkeleton):
             self.running = False
             self.cache(running=self.running)
 
-    def init_ariane_directories(self, component):
-        operating_system = component.operating_system.get()
+    def compute_current_possible_network(self, operating_system):
         # Find current Datacenter, routing area and subnets according to runtime IP on NICs and possible datacenters:
         current_possible_datacenter_config = []
         current_possible_routing_area_config = []
         current_possible_subnet_config = []
+
+        current_possible_remote_vpn_datacenter_config = []
+        current_possible_remote_vpn_routing_area_config = []
+        current_possible_remote_vpn_subnet_config = []
 
         for nic in operating_system.nics:
             nic_is_located = False
@@ -85,19 +88,28 @@ class DirectoryGear(InjectorGearSkeleton):
                         for datacenter_config in self.config.potential_datacenters:
                             for routing_area_config in datacenter_config.routing_areas:
                                 for subnet_config in routing_area_config.subnets:
-                                    if subnet_config.subnet_ip == subnet_ip and \
-                                                    subnet_config.subnet_mask == subnet_mask:
-                                        if datacenter_config not in current_possible_datacenter_config:
-                                            current_possible_datacenter_config.append(datacenter_config)
-                                        current_possible_routing_area_config.append(routing_area_config)
-                                        current_possible_subnet_config.append(subnet_config)
-                                        nic_is_located = True
+                                    if routing_area_config.type == "VPN":
+                                        if subnet_config.subnet_ip == subnet_ip:
+                                            current_possible_remote_vpn_datacenter_config.append(datacenter_config)
+                                            current_possible_remote_vpn_routing_area_config.append(routing_area_config)
+                                            current_possible_remote_vpn_subnet_config.append(subnet_config)
+                                            nic_is_located = True
+                                    else:
+                                        if subnet_config.subnet_ip == subnet_ip and \
+                                                        subnet_config.subnet_mask == subnet_mask:
+                                            if datacenter_config not in current_possible_datacenter_config:
+                                                current_possible_datacenter_config.append(datacenter_config)
+                                            current_possible_routing_area_config.append(routing_area_config)
+                                            current_possible_subnet_config.append(subnet_config)
+                                            nic_is_located = True
 
-                    if not nic_is_located:
-                        print('WARN: nic ' +
-                              nic.mac_address + '/' if nic.mac_address is not None else ''
-                                                                                        + nic.ipv4_address +
-                              ' has not been located on the possibles networks')
+                        if not nic_is_located:
+                            if nic.mac_address is not None:
+                                print('WARN: nic ' + nic.mac_address + '/' + nic.ipv4_address +
+                                      ' has not been located on the possibles networks')
+                            else:
+                                print('WARN: nic ' + nic.ipv4_address +
+                                      ' has not been located on the possibles networks')
 
             except Exception as e:
                 print(e.__str__())
@@ -106,6 +118,28 @@ class DirectoryGear(InjectorGearSkeleton):
             print('WARN: multiple current possible datacenter found - will ignore directories sync')
         elif current_possible_datacenter_config.__len__() == 0:
             print('WARN: no current possible datacenter found - will ignore directories sync')
+
+        return [
+            current_possible_datacenter_config,
+            current_possible_routing_area_config,
+            current_possible_subnet_config,
+            current_possible_remote_vpn_datacenter_config,
+            current_possible_remote_vpn_routing_area_config,
+            current_possible_remote_vpn_subnet_config
+        ]
+
+    def init_ariane_directories(self, component):
+        operating_system = component.operating_system.get()
+
+        current_possible_network = self.compute_current_possible_network(operating_system)
+
+        current_possible_datacenter_config = current_possible_network[0]
+        current_possible_routing_area_config = current_possible_network[1]
+        current_possible_subnet_config = current_possible_network[2]
+
+        current_possible_remote_vpn_datacenter_config = current_possible_network[3]
+        current_possible_remote_vpn_routing_area_config = current_possible_network[4]
+        current_possible_remote_vpn_subnet_config = current_possible_network[5]
 
         # Sync Operating System
         if operating_system.osi_id is not None:
@@ -133,9 +167,13 @@ class DirectoryGear(InjectorGearSkeleton):
                     operating_system.environment_id = None
 
             if self.environment is None:
-                self.environment = Environment(name=self.config.organisation_context.environment.name,
-                                               description=self.config.organisation_context.environment.description)
-                self.environment.save()
+                self.environment = EnvironmentService.find_environment(
+                    env_name=self.config.organisation_context.environment.name
+                )
+                if self.environment is None:
+                    self.environment = Environment(name=self.config.organisation_context.environment.name,
+                                                   description=self.config.organisation_context.environment.description)
+                    self.environment.save()
                 operating_system.environment_id = self.environment.id
                 self.osi.add_environment(self.environment)
         else:
@@ -195,50 +233,103 @@ class DirectoryGear(InjectorGearSkeleton):
                 operating_system.datacenter_id = self.datacenter.id
 
             # Sync routing areas and subnets
-            if not operating_system.routing_area_ids.empty():
-                for cached_routing_area_id in operating_system.routing_area_ids:
-                    cached_routing_area = RoutingAreaService.find_routing_area(ra_id=cached_routing_area_id)
-                    if cached_routing_area is not None:
-                        if cached_routing_area in current_possible_routing_area_config:
-                            for subnet_id in cached_routing_area.subnet_ids:
-                                subnet = SubnetService.find_subnet(sb_id=subnet_id)
-                                if subnet is not None:
-                                    if subnet in current_possible_subnet_config:
-                                        if subnet.id not in operating_system.subnet_ids:
-                                            operating_system.subnet_ids.append(subnet.id)
-                                        if subnet.id not in self.osi.subnet_ids:
-                                            self.osi.add_subnet(subnet)
-                                        if subnet not in self.subnets:
-                                            self.subnets.append(subnet)
-                                        current_possible_subnet_config.remove(subnet)
-                                    else:
-                                        if subnet.id in operating_system.subnet_ids:
-                                            operating_system.subnet_ids.remove(subnet.id)
-                                        if subnet.id in self.osi.subnet_ids:
-                                            self.osi.del_subnet(subnet)
-                                        if subnet in self.subnets:
-                                            self.subnets.remove(subnet)
-
-                            if cached_routing_area not in self.routing_areas:
-                                self.routing_areas.append(cached_routing_area)
-                            current_possible_routing_area_config.remove(cached_routing_area)
-
-                        else:
-                            for subnet_id in cached_routing_area.subnet_ids:
-                                subnet = SubnetService.find_subnet(sb_id=subnet_id)
-                                if subnet is not None:
+            for cached_routing_area_id in operating_system.routing_area_ids:
+                cached_routing_area = RoutingAreaService.find_routing_area(ra_id=cached_routing_area_id)
+                if cached_routing_area is not None:
+                    if cached_routing_area in current_possible_routing_area_config or \
+                                    cached_routing_area in current_possible_remote_vpn_routing_area_config:
+                        for subnet_id in cached_routing_area.subnet_ids:
+                            subnet = SubnetService.find_subnet(sb_id=subnet_id)
+                            if subnet is not None:
+                                if subnet in current_possible_subnet_config or \
+                                                subnet in current_possible_remote_vpn_subnet_config:
+                                    if subnet.id not in operating_system.subnet_ids:
+                                        operating_system.subnet_ids.append(subnet.id)
+                                    if subnet.id not in self.osi.subnet_ids:
+                                        self.osi.add_subnet(subnet)
+                                    if subnet not in self.subnets:
+                                        self.subnets.append(subnet)
                                     if subnet in current_possible_subnet_config:
                                         current_possible_subnet_config.remove(subnet)
+                                    if subnet in current_possible_remote_vpn_subnet_config:
+                                        current_possible_remote_vpn_subnet_config.remove(subnet)
+                                else:
                                     if subnet.id in operating_system.subnet_ids:
                                         operating_system.subnet_ids.remove(subnet.id)
                                     if subnet.id in self.osi.subnet_ids:
                                         self.osi.del_subnet(subnet)
                                     if subnet in self.subnets:
                                         self.subnets.remove(subnet)
-                            if cached_routing_area in self.routing_areas:
-                                self.routing_areas.remove(cached_routing_area)
+
+                        if cached_routing_area not in self.routing_areas:
+                            self.routing_areas.append(cached_routing_area)
+                        if cached_routing_area in current_possible_routing_area_config:
+                            current_possible_routing_area_config.remove(cached_routing_area)
+                        if cached_routing_area in current_possible_remote_vpn_routing_area_config:
+                            current_possible_remote_vpn_routing_area_config.remove(cached_routing_area)
+
                     else:
-                        operating_system.routing_area_ids.remove(cached_routing_area_id)
+                        for subnet_id in cached_routing_area.subnet_ids:
+                            subnet = SubnetService.find_subnet(sb_id=subnet_id)
+                            if subnet is not None:
+                                if subnet in current_possible_subnet_config:
+                                    current_possible_subnet_config.remove(subnet)
+                                if subnet.id in operating_system.subnet_ids:
+                                    operating_system.subnet_ids.remove(subnet.id)
+                                if subnet.id in self.osi.subnet_ids:
+                                    self.osi.del_subnet(subnet)
+                                if subnet in self.subnets:
+                                    self.subnets.remove(subnet)
+                        if cached_routing_area in self.routing_areas:
+                            self.routing_areas.remove(cached_routing_area)
+                else:
+                    operating_system.routing_area_ids.remove(cached_routing_area_id)
+
+            for remote_vpn_dc_config in current_possible_remote_vpn_datacenter_config:
+                vpn_dc = DatacenterService.find_datacenter(dc_name=remote_vpn_dc_config.name)
+                if vpn_dc is None:
+                    vpn_dc = Datacenter(
+                        name=remote_vpn_dc_config.name,
+                        description=remote_vpn_dc_config.description,
+                        address=remote_vpn_dc_config.address,
+                        zip_code=remote_vpn_dc_config.zipcode,
+                        town=remote_vpn_dc_config.town,
+                        country=remote_vpn_dc_config.country,
+                        gps_latitude=remote_vpn_dc_config.gps_lat,
+                        gps_longitude=remote_vpn_dc_config.gps_lng
+                    )
+                    vpn_dc.save()
+
+                for remote_routing_area_config in remote_vpn_dc_config.routing_areas:
+                    if remote_routing_area_config in current_possible_remote_vpn_routing_area_config:
+                        vpn_ra = RoutingAreaService.find_routing_area(ra_name=remote_routing_area_config.name)
+                        if vpn_ra is None:
+                            vpn_ra = RoutingArea(name=remote_routing_area_config.name,
+                                                 multicast=remote_routing_area_config.multicast,
+                                                 ra_type=remote_routing_area_config.type,
+                                                 description=remote_routing_area_config.description)
+                            vpn_ra.save()
+                        vpn_ra.add_datacenter(self.datacenter)
+                        vpn_ra.add_datacenter(vpn_dc)
+                        self.routing_areas.append(vpn_ra)
+                        operating_system.routing_area_ids.append(vpn_ra.id)
+
+                    for remote_subnet_config in remote_routing_area_config.subnets:
+                        if remote_subnet_config in current_possible_remote_vpn_subnet_config:
+                            vpn_subnet = SubnetService.find_subnet(sb_name=remote_subnet_config.name)
+                            if vpn_subnet is None:
+                                vpn_subnet = Subnet(name=remote_subnet_config.name,
+                                                    description=remote_subnet_config.description,
+                                                    routing_area_id=vpn_ra.id,
+                                                    ip=remote_subnet_config.subnet_ip,
+                                                    mask=remote_subnet_config.subnet_mask)
+                                vpn_subnet.save()
+                            vpn_subnet.add_datacenter(self.datacenter)
+                            vpn_subnet.add_datacenter(vpn_dc)
+                            operating_system.subnet_ids.append(vpn_subnet.id)
+                            self.subnets.append(vpn_subnet)
+                            if vpn_subnet.id not in self.osi.subnet_ids:
+                                self.osi.add_subnet(vpn_subnet)
 
             for routing_area_config in current_possible_routing_area_config:
                 routing_area = RoutingAreaService.find_routing_area(ra_name=routing_area_config.name)
@@ -262,10 +353,20 @@ class DirectoryGear(InjectorGearSkeleton):
                                             routing_area_id=routing_area.id,
                                             ip=subnet_config.subnet_ip, mask=subnet_config.subnet_mask)
                             subnet.save()
+                            subnet.add_datacenter(self.datacenter)
                         operating_system.subnet_ids.append(subnet.id)
                         self.subnets.append(subnet)
                         if subnet.id not in self.osi.subnet_ids:
                             self.osi.add_subnet(subnet)
+
+            for ipv4_id in self.osi.ip_address_ids:
+                ipv4 = IPAddressService.find_ip_address(ipa_id=ipv4_id)
+                to_be_removed_from_osi = True
+                for nic in operating_system.nics:
+                    if nic.ipv4_address is not None and nic.ipv4_address == ipv4.ip_address:
+                        to_be_removed_from_osi = False
+                if to_be_removed_from_osi:
+                    self.osi.del_ip_address(ipv4)
 
             for nic in operating_system.nics:
                 try:
@@ -275,21 +376,45 @@ class DirectoryGear(InjectorGearSkeleton):
                         subnet_mask = nic.ipv4_mask
 
                         if subnet_ip != '127.0.0.0':
-                            for subnet in self.subnets:
-                                if subnet_ip == subnet.ip and subnet_mask == subnet.mask:
-                                    ip_address = IPAddressService.find_ip_address(nic.ipv4_address, subnet.id)
-                                    if ip_address is None:
-                                        ip_address = IPAddress(ip_address=nic.ipv4_address, fqdn=nic.ipv4_fqdn,
-                                                               ipa_subnet_id=subnet.id, ipa_osi_id=self.osi.id)
-                                        ip_address.save()
-                                        subnet.sync()
-                                    else:
-                                        if ip_address.ipa_os_instance_id != self.osi.id:
-                                            ip_address.ipa_os_instance_id = self.osi.id
+                            if subnet_mask is not None:
+                                for subnet in self.subnets:
+                                    if subnet_ip == subnet.ip and subnet_mask == subnet.mask:
+                                        ip_address = IPAddressService.find_ip_address(ipa_ip_address=nic.ipv4_address,
+                                                                                      ipa_subnet_id=subnet.id)
+                                        if ip_address is None:
+                                            ip_address = IPAddress(ip_address=nic.ipv4_address, fqdn=nic.ipv4_fqdn,
+                                                                   ipa_subnet_id=subnet.id, ipa_osi_id=self.osi.id)
                                             ip_address.save()
-                                    self.osi.sync()
+                                            subnet.sync()
+                                        else:
+                                            if ip_address.ipa_os_instance_id != self.osi.id:
+                                                ip_address.ipa_os_instance_id = self.osi.id
+                                                ip_address.save()
+                                        self.osi.sync()
+                            else:
+                                for routing_area in self.routing_areas:
+                                    if routing_area.type == RoutingArea.RA_TYPE_VPN:
+                                        for subnet in self.subnets:
+                                            if subnet_ip == subnet.ip and routing_area.id == subnet.routing_area_id:
+                                                ip_address = IPAddressService.find_ip_address(
+                                                    ipa_ip_address=nic.ipv4_address,
+                                                    ipa_subnet_id=subnet.id
+                                                )
+                                                if ip_address is None:
+                                                    ip_address = IPAddress(ip_address=nic.ipv4_address,
+                                                                           fqdn=nic.ipv4_fqdn,
+                                                                           ipa_subnet_id=subnet.id,
+                                                                           ipa_osi_id=self.osi.id)
+                                                    ip_address.save()
+                                                    subnet.sync()
+                                                else:
+                                                    if ip_address.ipa_os_instance_id != self.osi.id:
+                                                        ip_address.ipa_os_instance_id = self.osi.id
+                                                        ip_address.save()
+                                                self.osi.sync()
+
                         else:
-                            local_routing_area = RoutingAreaService.find_routing_area(self.hostname+".local")
+                            local_routing_area = RoutingAreaService.find_routing_area(ra_name=self.hostname+".local")
                             if local_routing_area is None:
                                 local_routing_area = RoutingArea(name=self.hostname+".local",
                                                                  multicast=RoutingArea.RA_MULTICAST_NOLIMIT,
@@ -298,18 +423,22 @@ class DirectoryGear(InjectorGearSkeleton):
                                 local_routing_area.save()
 
                             loopback_subnet = SubnetService.find_subnet(sb_name=self.hostname+".loopback")
-                            if loopback_subnet is None:
-                                loopback_subnet = Subnet(name=self.hostname+".loopback",
-                                                         description=self.hostname + " loopback subnet",
-                                                         routing_area_id=local_routing_area.id,
-                                                         ip=subnet_ip, mask=subnet_mask)
-                                loopback_subnet.save()
+                            if loopback_subnet is not None:
+                                loopback_subnet.remove()
+
+                            loopback_subnet = Subnet(name=self.hostname+".loopback",
+                                                     description=self.hostname + " loopback subnet",
+                                                     routing_area_id=local_routing_area.id,
+                                                     ip=subnet_ip, mask=subnet_mask)
+                            loopback_subnet.save()
+                            loopback_subnet.add_datacenter(self.datacenter)
+
                             self.osi.add_subnet(loopback_subnet)
 
-                            ip_address = IPAddressService.find_ip_address(nic.ipv4_fqdn)
+                            ip_address = IPAddressService.find_ip_address(ipa_fqdn=nic.ipv4_fqdn)
                             if ip_address is None:
                                 ip_address = IPAddress(ip_address=nic.ipv4_address, fqdn=nic.ipv4_fqdn,
-                                                       ipa_subnet_id=loopback_subnet, ipa_osi_id=self.osi.id)
+                                                       ipa_subnet_id=loopback_subnet.id, ipa_osi_id=self.osi.id)
                                 ip_address.save()
                                 loopback_subnet.sync()
 

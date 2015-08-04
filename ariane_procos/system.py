@@ -253,8 +253,8 @@ class OperatingSystem(object):
 
         self.osi_id = osi_id
         self.datacenter_id = datacenter_id
-        self.routing_area_ids = routing_area_ids
-        self.subnet_ids = subnet_ids
+        self.routing_area_ids = routing_area_ids if routing_area_ids is not None else []
+        self.subnet_ids = subnet_ids if subnet_ids is not None else []
         self.environment_id = environment_id
         self.team_id = team_id
 
