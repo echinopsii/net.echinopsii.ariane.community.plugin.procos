@@ -18,6 +18,7 @@
 import copy
 import json
 import socket
+import struct
 import psutil
 
 __author__ = 'mffrench'
@@ -199,7 +200,7 @@ class NetworkInterfaceCard(object):
         if self.nic_id != other.nic_id or self.name != other.name or self.mac_address != other.mac_address\
                 or self.duplex != other.duplex or self.speed != other.speed or self.mtu != other.mtu\
                 or self.ipv4_id != other.ipv4_id or self.ipv4_address != other.ipv4_address\
-                or self.ipv4_mask != other.ipv4_mac or self.ipv4_fqdn != other.ipv4_fqdn\
+                or self.ipv4_mask != other.ipv4_mask or self.ipv4_fqdn != other.ipv4_fqdn\
                 or self.ipv4_broadcast != other.ipv4_broadcast:
             return False
         else:
@@ -223,6 +224,16 @@ class NetworkInterfaceCard(object):
             'ipv4_fqdn': self.ipv4_fqdn
         }
         return json_obj
+
+    @staticmethod
+    def ip_is_in_subnet(ip_address, subnet_ip, subnet_mask):
+        ret = False
+        if ip_address and subnet_ip and subnet_mask:
+            ip_address_long = struct.unpack('!L', socket.inet_aton(ip_address))[0]
+            subnet_ip_long = struct.unpack('!L', socket.inet_aton(subnet_ip))[0]
+            subnet_mask_long = struct.unpack('!L', socket.inet_aton(subnet_mask))[0]
+            ret = (ip_address_long & subnet_mask_long == subnet_ip_long)
+        return ret
 
     @staticmethod
     def json_2_nic(json_obj):
@@ -302,9 +313,11 @@ class OperatingSystem(object):
             'osi_id': self.osi_id,
             'datacenter_id': self.datacenter_id,
             'routing_area_ids': self.routing_area_ids,
-            'subnet_ids': self.subnet_ids
+            'subnet_ids': self.subnet_ids,
+            'environment_id': self.environment_id,
+            'team_id': self.team_id
         }
-        return json_obj
+        return json.dumps(json_obj)
 
     @staticmethod
     def json_2_operating_system(json_obj):
@@ -330,6 +343,7 @@ class OperatingSystem(object):
 
         return OperatingSystem(
             container_id=json_obj['container_id'], osi_id=json_obj['osi_id'], datacenter_id=json_obj['datacenter_id'],
+            environment_id=json_obj['datacenter_id'], team_id=json_obj['team_id'],
             routing_area_ids=json_obj['routing_area_ids'], subnet_ids=json_obj['subnet_ids'],
             hostname=json_obj['hostname'], last_nics=last_nics, nics=nics, last_processs=last_processs,
             processs=processs

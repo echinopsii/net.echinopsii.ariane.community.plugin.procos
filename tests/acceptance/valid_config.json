@@ -10,7 +10,7 @@
         "rbmq_vhost": "/ariane"
     },
     "ariane_procos": {
-        "sleeping_period": 10,
+        "sleeping_period": 30,
         "potential_datacenters": [
             {
                 "name": "CPE-lyon",
@@ -57,7 +57,7 @@
                             {
                                 "name": "Free",
                                 "description": "Main Free subnet",
-                                "subnet_ip": "192.169.1.0",
+                                "subnet_ip": "192.168.1.0",
                                 "subnet_mask": "255.255.255.0"
                             }
                         ]
@@ -99,6 +99,32 @@
                                 "description": "WAI wifi subnet",
                                 "subnet_ip": "192.168.7.0",
                                 "subnet_mask": "255.255.255.0"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Carglass Courbevoie",
+                "description": "Carglass Courbevoie",
+                "address": "107 Boulevard Mission Marchand",
+                "zipcode": 92400,
+                "town": "Courbevoie",
+                "country": "France",
+                "gps_lat": 48.901740,
+                "gps_lng": 2.239230,
+                "routing_areas": [
+                    {
+                        "name": "Carglass Courbevoie Network",
+                        "multicast": "FILTERED",
+                        "type": "LAN",
+                        "description": "Carglass Courbevoie routing area",
+                        "subnets": [
+                            {
+                                "name": "Carglass Client",
+                                "description": "WIFI Carglass Client ",
+                                "subnet_ip": "10.208.180.0",
+                                "subnet_mask": "255.255.254.0"
                             }
                         ]
                     }

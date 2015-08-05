@@ -37,12 +37,19 @@ class GearsSkeletonTest(unittest.TestCase):
 
     def test_gear_skeleton(self):
         system_gear = SystemGear.start(config=self.config).proxy()
-        time.sleep(20)
-        self.assertTrue(system_gear.directory_gear.get().update_count.get() == 1)
-        self.assertTrue(system_gear.mapping_gear.get().update_count.get() == 1)
+        time.sleep(45)
+
+        directory_update_count = system_gear.directory_gear.get().update_count.get()
+        self.assertTrue(directory_update_count >= 1)
+
+        mapping_update_count = system_gear.mapping_gear.get().update_count.get()
+        self.assertTrue(mapping_update_count >= 1)
+
         current_blob = system_gear.component.get().component_cache_actor.get().blob.get()
-        self.assertTrue(current_blob != '')
+        self.assertTrue(current_blob is not None)
+
         system_gear.stop()
         system_gear = SystemGear.start(config=self.config).proxy()
+
         current_blob = system_gear.component.get().component_cache_actor.get().blob.get()
-        self.assertTrue(current_blob != '')
+        self.assertTrue(current_blob is not None)

@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import datetime
+import json
 import socket
 from ariane_clip3.injector import InjectorComponentSkeleton, InjectorCachedComponent
 from system import OperatingSystem
@@ -29,16 +30,19 @@ class SystemComponent(InjectorComponentSkeleton):
         super(SystemComponent, self).__init__(
             component_id=
             'ariane.community.plugin.procos.components.cache.system_component@' + self.hostname,
-            component_name='procos_system_component@localhost',
+            component_name='procos_system_component@' + self.hostname,
             component_admin_queue=
             'ariane.community.plugin.procos.components.cache.system_component@' + self.hostname,
             refreshing=False, next_action=InjectorCachedComponent.action_create,
             json_last_refresh=datetime.datetime.now(),
-            attached_gear_id=attached_gear_id,
-            data_blob=''
+            attached_gear_id=attached_gear_id
         )
-        self.operating_system = OperatingSystem()
-        self.operating_system.sniff()
+        cached_blob = self.component_cache_actor.blob.get()
+        if cached_blob is not None:
+            self.operating_system = OperatingSystem.json_2_operating_system(cached_blob)
+        else:
+            self.operating_system = OperatingSystem()
+            self.operating_system.sniff()
         self.version = 0
 
     def data_blob(self):
