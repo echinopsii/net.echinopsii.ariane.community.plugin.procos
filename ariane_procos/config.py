@@ -60,11 +60,25 @@ class OrganizationContextConfig(object):
             return True
 
 
+class CompanyConfig(object):
+    def __init__(self, name=None, description=None):
+        self.name = name
+        self.description = description
+
+
+class SystemTypeConfig(object):
+    def __init__(self, name=None, architecture=None, company=None):
+        self.name = name
+        self.architecture = architecture
+        self.company = company
+
+
 class SystemContextConfig(object):
-    def __init__(self, description=None, admin_gate_protocol=None, embedding_osi_hostname=None):
+    def __init__(self, description=None, admin_gate_protocol=None, embedding_osi_hostname=None, os_type=None):
         self.description = description
         self.admin_gate_protocol = admin_gate_protocol
         self.embedding_osi_hostname = embedding_osi_hostname
+        self.os_type = os_type
 
 
 class SubnetConfig(object):
@@ -226,10 +240,20 @@ class Config(object):
                         self.potential_datacenters.append(datacenter_config)
 
                 if config['ariane_procos']['system_context'] is not None:
+                    ost_company = CompanyConfig(
+                        name=config['ariane_procos']['system_context']['type']['supporting_company']['name'],
+                        description=config['ariane_procos']['system_context']['type']['supporting_company']['description']
+                    )
+                    ost = SystemTypeConfig(
+                        name=config['ariane_procos']['system_context']['type']['name'],
+                        architecture=config['ariane_procos']['system_context']['type']['architecture'],
+                        company=ost_company
+                    )
                     self.system_context = SystemContextConfig(
                         description=config['ariane_procos']['system_context']['description'],
                         admin_gate_protocol=config['ariane_procos']['system_context']['admin_gate_proto'],
-                        embedding_osi_hostname=config['ariane_procos']['system_context']['embedding_osi_hostname']
+                        embedding_osi_hostname=config['ariane_procos']['system_context']['embedding_osi_hostname'],
+                        os_type=ost
                     )
 
                 if config['ariane_procos']['organization_context'] is not None:

@@ -25,8 +25,8 @@ __author__ = 'mffrench'
 
 
 class SystemComponent(InjectorComponentSkeleton):
-    def __init__(self, attached_gear_id=None):
-        self.hostname = socket.gethostname()
+    def __init__(self, attached_gear_id=None, hostname=socket.gethostname()):
+        self.hostname = hostname
         super(SystemComponent, self).__init__(
             component_id=
             'ariane.community.plugin.procos.components.cache.system_component@' + self.hostname,

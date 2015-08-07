@@ -85,7 +85,14 @@
             "description": "Personal mcbook pro",
             "admin_gate_proto": "ssh://",
             "embedding_osi_hostname": "",
-            "type": "OS X Yosemite 10.10"
+            "type": {
+                "name": "OS X Yosemite 10.10",
+                "architecture": "x86_64",
+                "supporting_company": {
+                    "name": "Apple",
+                    "description": "RIP Steve Jobs"
+                }
+            }
         },
         "organization_context": {
             "environment": {

@@ -19,7 +19,8 @@ import socket
 import threading
 import time
 from ariane_clip3.directory import DatacenterService, Datacenter, RoutingAreaService, RoutingArea, OSInstanceService, \
-    OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team
+    OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team, \
+    OSTypeService, OSType, Company
 from ariane_clip3.injector import InjectorGearSkeleton
 from components import SystemComponent
 from config import RoutingAreaConfig, SubnetConfig
@@ -29,26 +30,17 @@ __author__ = 'mffrench'
 
 
 class DirectoryGear(InjectorGearSkeleton):
-    def __init__(self, config):
-        self.config = config
-        self.hostname = socket.gethostname()
+    def __init__(self):
         super(DirectoryGear, self).__init__(
-            gear_id='ariane.community.plugin.procos.gears.cache.directory_gear@'+self.hostname,
-            gear_name='procos_directory_gear@'+self.hostname,
-            gear_description='Ariane ProcOS directory gear for '+self.hostname,
-            gear_admin_queue='ariane.community.plugin.procos.gears.cache.directory_gear@'+self.hostname,
+            gear_id='ariane.community.plugin.procos.gears.cache.directory_gear@'+SystemGear.hostname,
+            gear_name='procos_directory_gear@'+SystemGear.hostname,
+            gear_description='Ariane ProcOS directory gear for '+SystemGear.hostname,
+            gear_admin_queue='ariane.community.plugin.procos.gears.cache.directory_gear@'+SystemGear.hostname,
             running=False
         )
         self.update_count = 0
         self.is_network_sync_possible = True
         self.current_possible_network = []
-
-        self.datacenter = None
-        self.routing_areas = []
-        self.subnets = []
-        self.osi = None
-        self.team = None
-        self.environment = None
 
     def on_start(self):
         self.running = True
@@ -84,7 +76,7 @@ class DirectoryGear(InjectorGearSkeleton):
             try:
                 if nic.ipv4_address is not None:
                     if not nic.ipv4_address.startswith('127'):
-                        for datacenter_config in self.config.potential_datacenters:
+                        for datacenter_config in SystemGear.config.potential_datacenters:
                             for routing_area_config in datacenter_config.routing_areas:
                                 for subnet_config in routing_area_config.subnets:
 
@@ -142,75 +134,128 @@ class DirectoryGear(InjectorGearSkeleton):
             current_possible_remote_vpn_subnet_config
         ]
 
-    def sync_operating_system(self, operating_system):
+    @staticmethod
+    def sync_operating_system(operating_system):
         # Sync Operating System
         if operating_system.osi_id is not None:
-            self.osi = OSInstanceService.find_os_instance(osi_id=operating_system.osi_id)
-            if self.osi.name != self.hostname:
-                self.osi = None
+            SystemGear.osi = OSInstanceService.find_os_instance(osi_id=operating_system.osi_id)
+            if SystemGear.osi.name != SystemGear.hostname:
+                SystemGear.osi = None
                 operating_system.osi_id = None
 
-        if self.osi is None:
-            self.osi = OSInstanceService.find_os_instance(osi_name=self.hostname)
-            if self.osi is None:
-                self.osi = OSInstance(name=self.hostname, description=self.config.system_context.description,
-                                      admin_gate_uri=self.config.system_context.admin_gate_protocol+self.hostname)
-                self.osi.save()
-            operating_system.osi_id = self.osi.id
+        if SystemGear.osi is None:
+            SystemGear.osi = OSInstanceService.find_os_instance(osi_name=SystemGear.hostname)
+            if SystemGear.osi is None:
+                SystemGear.osi = OSInstance(
+                    name=SystemGear.hostname,
+                    description=SystemGear.config.system_context.description,
+                    admin_gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.hostname)
+                SystemGear.osi.save()
+            operating_system.osi_id = SystemGear.osi.id
 
-    def sync_environment(self, operating_system):
+    @staticmethod
+    def sync_operating_system_type(operating_system):
+        if SystemGear.osi is None:
+            print('ERROR: operating system instance is not synced')
+            return
+
+        # Sync OS Type
+        if operating_system.ost_id is not None:
+            SystemGear.ost = OSTypeService.find_ostype(ost_id=operating_system.ost_id)
+            if SystemGear.ost is not None and SystemGear.osi.ost_id != SystemGear.ost.id:
+                SystemGear.ost = None
+                SystemGear.ost_company = None
+                SystemGear.osi.ost_id = 0
+                SystemGear.osi.save()
+
+        if SystemGear.ost is None:
+            SystemGear.ost_company = Company(
+                name=SystemGear.config.system_context.os_type.company.name,
+                description=SystemGear.config.system_context.os_type.company.description
+            )
+            SystemGear.ost_company.save()
+            SystemGear.ost = OSType(
+                name=SystemGear.config.system_context.os_type.name,
+                architecture=SystemGear.config.system_context.os_type.architecture,
+                os_type_company_id=SystemGear.ost_company.id
+            )
+            SystemGear.ost.save()
+            SystemGear.osi.ost_id = SystemGear.ost.id
+            SystemGear.osi.save()
+            operating_system.ost_id = SystemGear.ost.id
+
+    @staticmethod
+    def sync_environment(operating_system):
+        if SystemGear.osi is None:
+            print('ERROR: operating system instance is not synced')
+            return
+
         # Sync environment
-        if self.config.organisation_context is not None and self.config.organisation_context.environment is not None:
+        if SystemGear.config.organisation_context is not None and \
+                        SystemGear.config.organisation_context.environment is not None:
             if operating_system.environment_id is not None:
-                self.environment = EnvironmentService.find_environment(operating_system.environment_id)
-                if self.environment is not None and \
-                                self.environment.name != self.config.organisation_context.environment.name:
-                    self.environment.del_os_instance(self.osi)
-                    self.environment = None
+                SystemGear.environment = EnvironmentService.find_environment(operating_system.environment_id)
+                if SystemGear.environment is not None and \
+                                SystemGear.environment.name != SystemGear.config.organisation_context.environment.name:
+                    SystemGear.environment.del_os_instance(SystemGear.osi)
+                    SystemGear.environment = None
                     operating_system.environment_id = None
 
-            if self.environment is None:
-                self.environment = EnvironmentService.find_environment(
-                    env_name=self.config.organisation_context.environment.name
+            if SystemGear.environment is None:
+                SystemGear.environment = EnvironmentService.find_environment(
+                    env_name=SystemGear.config.organisation_context.environment.name
                 )
-                if self.environment is None:
-                    self.environment = Environment(name=self.config.organisation_context.environment.name,
-                                                   description=self.config.organisation_context.environment.description)
-                    self.environment.save()
-                operating_system.environment_id = self.environment.id
-                self.osi.add_environment(self.environment)
+                if SystemGear.environment is None:
+                    SystemGear.environment = Environment(
+                        name=SystemGear.config.organisation_context.environment.name,
+                        description=SystemGear.config.organisation_context.environment.description
+                    )
+                    SystemGear.environment.save()
+                operating_system.environment_id = SystemGear.environment.id
+                SystemGear.osi.add_environment(SystemGear.environment)
         else:
             if operating_system.environment_id is not None:
                 environment = EnvironmentService.find_environment(operating_system.environment_id)
-                environment.del_os_instance(self.osi)
+                environment.del_os_instance(SystemGear.osi)
                 operating_system.environment_id = None
 
-    def sync_team(self, operating_system):
+    @staticmethod
+    def sync_team(operating_system):
+        if SystemGear.osi is None:
+            print('ERROR: operating system instance is not synced')
+            return
+
         # Sync team
-        if self.config.organisation_context is not None and self.config.organisation_context.team is not None:
+        if SystemGear.config.organisation_context is not None and \
+                        SystemGear.config.organisation_context.team is not None:
             if operating_system.team_id is not None:
-                self.team = TeamService.find_team(team_id=operating_system.team_id)
-                if self.team is not None and self.team.name != self.config.organisation_context.team.name:
-                    self.team.del_os_instance(self.osi)
-                    self.team = None
+                SystemGear.team = TeamService.find_team(team_id=operating_system.team_id)
+                if SystemGear.team is not None and \
+                                SystemGear.team.name != SystemGear.config.organisation_context.team.name:
+                    SystemGear.team.del_os_instance(SystemGear.osi)
+                    SystemGear.team = None
                     operating_system.team_id = None
 
-            if self.team is None:
-                self.team = TeamService.find_team(team_name=self.config.organisation_context.team.name)
-                if self.team is None:
-                    self.team = Team(name=self.config.organisation_context.team.name,
-                                     color_code=self.config.organisation_context.team.color_code,
-                                     description=self.config.organisation_context.team.description)
-                    self.team.save()
-                operating_system.team_id = self.team.id
-                self.osi.add_team(self.team)
+            if SystemGear.team is None:
+                SystemGear.team = TeamService.find_team(team_name=SystemGear.config.organisation_context.team.name)
+                if SystemGear.team is None:
+                    SystemGear.team = Team(name=SystemGear.config.organisation_context.team.name,
+                                           color_code=SystemGear.config.organisation_context.team.color_code,
+                                           description=SystemGear.config.organisation_context.team.description)
+                    SystemGear.team.save()
+                operating_system.team_id = SystemGear.team.id
+                SystemGear.osi.add_team(SystemGear.team)
         else:
             if operating_system.team_id is not None:
                 team = TeamService.find_team(team_id=operating_system.team_id)
-                team.del_os_instance(self.osi)
+                team.del_os_instance(SystemGear.osi)
                 operating_system.team_id = None
 
     def sync_network(self, operating_system):
+        if SystemGear.osi is None:
+            print('ERROR: operating system instance is not synced')
+            return
+
         # Sync network stuffs
         current_possible_datacenter_config = self.current_possible_network[0]
         current_possible_routing_area_config = self.current_possible_network[1]
@@ -223,42 +268,42 @@ class DirectoryGear(InjectorGearSkeleton):
 
         # Sync datacenter
         if operating_system.datacenter_id is not None:
-            self.datacenter = DatacenterService.find_datacenter(operating_system.datacenter_id)
-            if self.datacenter is not None and self.datacenter.name != current_datacenter.name:
+            SystemGear.datacenter = DatacenterService.find_datacenter(operating_system.datacenter_id)
+            if SystemGear.datacenter is not None and SystemGear.datacenter.name != current_datacenter.name:
                 # This OS has moved
                 print("INFO - The operating system has a new location !")
-                self.datacenter = None
+                SystemGear.datacenter = None
                 operating_system.datacenter_id = None
 
-                for subnet_id in self.osi.subnet_ids:
+                for subnet_id in SystemGear.osi.subnet_ids:
                     subnet_to_unbind = SubnetService.find_subnet(sb_id=subnet_id)
                     if subnet_to_unbind is not None:
-                        self.osi.del_subnet(subnet_to_unbind)
+                        SystemGear.osi.del_subnet(subnet_to_unbind)
                         operating_system.routing_area_ids.remove(subnet_to_unbind.routing_area_id)
                     operating_system.subnet_ids.remove(subnet_id)
 
-                embedding_osi = OSInstanceService.find_os_instance(osi_id=self.osi.embedding_osi_id)
-                embedding_osi.del_embedded_osi(self.osi)
+                embedding_osi = OSInstanceService.find_os_instance(osi_id=SystemGear.osi.embedding_osi_id)
+                embedding_osi.del_embedded_osi(SystemGear.osi)
 
-                for ip_id in self.osi.ip_address_ids:
+                for ip_id in SystemGear.osi.ip_address_ids:
                     ip_to_unbind = IPAddressService.find_ip_address(ipa_id=ip_id)
                     if ip_to_unbind is not None:
                         ip_to_unbind.remove()
-                self.osi.sync()
+                SystemGear.osi.sync()
 
-        if self.datacenter is None:
-            self.datacenter = DatacenterService.find_datacenter(dc_name=current_datacenter.name)
-            if self.datacenter is None:
-                self.datacenter = Datacenter(name=current_datacenter.name,
-                                             description=current_datacenter.description,
-                                             address=current_datacenter.address,
-                                             zip_code=current_datacenter.zipcode,
-                                             town=current_datacenter.town,
-                                             country=current_datacenter.country,
-                                             gps_latitude=current_datacenter.gps_lat,
-                                             gps_longitude=current_datacenter.gps_lng)
-                self.datacenter.save()
-            operating_system.datacenter_id = self.datacenter.id
+        if SystemGear.datacenter is None:
+            SystemGear.datacenter = DatacenterService.find_datacenter(dc_name=current_datacenter.name)
+            if SystemGear.datacenter is None:
+                SystemGear.datacenter = Datacenter(name=current_datacenter.name,
+                                                   description=current_datacenter.description,
+                                                   address=current_datacenter.address,
+                                                   zip_code=current_datacenter.zipcode,
+                                                   town=current_datacenter.town,
+                                                   country=current_datacenter.country,
+                                                   gps_latitude=current_datacenter.gps_lat,
+                                                   gps_longitude=current_datacenter.gps_lng)
+                SystemGear.datacenter.save()
+            operating_system.datacenter_id = SystemGear.datacenter.id
 
         # Sync routing areas and subnets
         for cached_routing_area_id in operating_system.routing_area_ids:
@@ -275,10 +320,10 @@ class DirectoryGear(InjectorGearSkeleton):
                                             mimic_cached_subnet_config in current_possible_remote_vpn_subnet_config:
                                 if subnet.id not in operating_system.subnet_ids:
                                     operating_system.subnet_ids.append(subnet.id)
-                                if subnet.id not in self.osi.subnet_ids:
-                                    self.osi.add_subnet(subnet)
-                                if subnet not in self.subnets:
-                                    self.subnets.append(subnet)
+                                if subnet.id not in SystemGear.osi.subnet_ids:
+                                    SystemGear.osi.add_subnet(subnet)
+                                if subnet not in SystemGear.subnets:
+                                    SystemGear.subnets.append(subnet)
                                 if mimic_cached_subnet_config in current_possible_subnet_config:
                                     current_possible_subnet_config.remove(mimic_cached_subnet_config)
                                 if mimic_cached_subnet_config in current_possible_remote_vpn_subnet_config:
@@ -286,13 +331,13 @@ class DirectoryGear(InjectorGearSkeleton):
                             else:
                                 if subnet.id in operating_system.subnet_ids:
                                     operating_system.subnet_ids.remove(subnet.id)
-                                if subnet.id in self.osi.subnet_ids:
-                                    self.osi.del_subnet(subnet)
-                                if subnet in self.subnets:
-                                    self.subnets.remove(subnet)
+                                if subnet.id in SystemGear.osi.subnet_ids:
+                                    SystemGear.osi.del_subnet(subnet)
+                                if subnet in SystemGear.subnets:
+                                    SystemGear.subnets.remove(subnet)
 
-                    if cached_routing_area not in self.routing_areas:
-                        self.routing_areas.append(cached_routing_area)
+                    if cached_routing_area not in SystemGear.routing_areas:
+                        SystemGear.routing_areas.append(cached_routing_area)
                     if mimic_cached_routing_area_config in current_possible_routing_area_config:
                         current_possible_routing_area_config.remove(mimic_cached_routing_area_config)
                     if mimic_cached_routing_area_config in current_possible_remote_vpn_routing_area_config:
@@ -307,12 +352,12 @@ class DirectoryGear(InjectorGearSkeleton):
                                 current_possible_subnet_config.remove(mimic_cached_subnet_config)
                             if subnet.id in operating_system.subnet_ids:
                                 operating_system.subnet_ids.remove(subnet.id)
-                            if subnet.id in self.osi.subnet_ids:
-                                self.osi.del_subnet(subnet)
-                            if subnet in self.subnets:
-                                self.subnets.remove(subnet)
-                    if cached_routing_area in self.routing_areas:
-                        self.routing_areas.remove(cached_routing_area)
+                            if subnet.id in SystemGear.osi.subnet_ids:
+                                SystemGear.osi.del_subnet(subnet)
+                            if subnet in SystemGear.subnets:
+                                SystemGear.subnets.remove(subnet)
+                    if cached_routing_area in SystemGear.routing_areas:
+                        SystemGear.routing_areas.remove(cached_routing_area)
             else:
                 operating_system.routing_area_ids.remove(cached_routing_area_id)
 
@@ -340,27 +385,27 @@ class DirectoryGear(InjectorGearSkeleton):
                                              ra_type=remote_routing_area_config.type,
                                              description=remote_routing_area_config.description)
                         vpn_ra.save()
-                    vpn_ra.add_datacenter(self.datacenter)
+                    vpn_ra.add_datacenter(SystemGear.datacenter)
                     vpn_ra.add_datacenter(vpn_dc)
-                    self.routing_areas.append(vpn_ra)
+                    SystemGear.routing_areas.append(vpn_ra)
                     operating_system.routing_area_ids.append(vpn_ra.id)
 
-                for remote_subnet_config in remote_routing_area_config.subnets:
-                    if remote_subnet_config in current_possible_remote_vpn_subnet_config:
-                        vpn_subnet = SubnetService.find_subnet(sb_name=remote_subnet_config.name)
-                        if vpn_subnet is None:
-                            vpn_subnet = Subnet(name=remote_subnet_config.name,
-                                                description=remote_subnet_config.description,
-                                                routing_area_id=vpn_ra.id,
-                                                ip=remote_subnet_config.subnet_ip,
-                                                mask=remote_subnet_config.subnet_mask)
-                            vpn_subnet.save()
-                        vpn_subnet.add_datacenter(self.datacenter)
-                        vpn_subnet.add_datacenter(vpn_dc)
-                        operating_system.subnet_ids.append(vpn_subnet.id)
-                        self.subnets.append(vpn_subnet)
-                        if vpn_subnet.id not in self.osi.subnet_ids:
-                            self.osi.add_subnet(vpn_subnet)
+                    for remote_subnet_config in remote_routing_area_config.subnets:
+                        if remote_subnet_config in current_possible_remote_vpn_subnet_config:
+                            vpn_subnet = SubnetService.find_subnet(sb_name=remote_subnet_config.name)
+                            if vpn_subnet is None:
+                                vpn_subnet = Subnet(name=remote_subnet_config.name,
+                                                    description=remote_subnet_config.description,
+                                                    routing_area_id=vpn_ra.id,
+                                                    ip=remote_subnet_config.subnet_ip,
+                                                    mask=remote_subnet_config.subnet_mask)
+                                vpn_subnet.save()
+                            vpn_subnet.add_datacenter(SystemGear.datacenter)
+                            vpn_subnet.add_datacenter(vpn_dc)
+                            operating_system.subnet_ids.append(vpn_subnet.id)
+                            SystemGear.subnets.append(vpn_subnet)
+                            if vpn_subnet.id not in SystemGear.osi.subnet_ids:
+                                SystemGear.osi.add_subnet(vpn_subnet)
 
         for routing_area_config in current_possible_routing_area_config:
             routing_area = RoutingAreaService.find_routing_area(ra_name=routing_area_config.name)
@@ -371,9 +416,9 @@ class DirectoryGear(InjectorGearSkeleton):
                                            ra_type=routing_area_config.type,
                                            description=routing_area_config.description)
                 routing_area.save()
-                routing_area.add_datacenter(self.datacenter)
+                routing_area.add_datacenter(SystemGear.datacenter)
                 operating_system.routing_area_ids.append(routing_area.id)
-                self.routing_areas.append(routing_area_config)
+                SystemGear.routing_areas.append(routing_area)
 
             for subnet_config in routing_area_config.subnets:
                 if subnet_config in current_possible_subnet_config:
@@ -384,13 +429,13 @@ class DirectoryGear(InjectorGearSkeleton):
                                         routing_area_id=routing_area.id,
                                         ip=subnet_config.subnet_ip, mask=subnet_config.subnet_mask)
                         subnet.save()
-                        subnet.add_datacenter(self.datacenter)
+                        subnet.add_datacenter(SystemGear.datacenter)
                     operating_system.subnet_ids.append(subnet.id)
-                    self.subnets.append(subnet)
-                    if subnet.id not in self.osi.subnet_ids:
-                        self.osi.add_subnet(subnet)
+                    SystemGear.subnets.append(subnet)
+                    if subnet.id not in SystemGear.osi.subnet_ids:
+                        SystemGear.osi.add_subnet(subnet)
 
-        for ipv4_id in self.osi.ip_address_ids:
+        for ipv4_id in SystemGear.osi.ip_address_ids:
             ipv4 = IPAddressService.find_ip_address(ipa_id=ipv4_id)
             to_be_removed = True
             for nic in operating_system.nics:
@@ -402,47 +447,47 @@ class DirectoryGear(InjectorGearSkeleton):
         for nic in operating_system.nics:
             if nic.ipv4_address is not None:
                 if not nic.ipv4_address.startswith('127'):
-                    for subnet in self.subnets:
+                    for subnet in SystemGear.subnets:
                         if NetworkInterfaceCard.ip_is_in_subnet(nic.ipv4_address, subnet.ip, subnet.mask):
                             ip_address = IPAddressService.find_ip_address(ipa_ip_address=nic.ipv4_address,
                                                                           ipa_subnet_id=subnet.id)
                             if ip_address is None:
                                 ip_address = IPAddress(ip_address=nic.ipv4_address, fqdn=nic.ipv4_fqdn,
-                                                       ipa_subnet_id=subnet.id, ipa_osi_id=self.osi.id)
+                                                       ipa_subnet_id=subnet.id, ipa_osi_id=SystemGear.osi.id)
                                 ip_address.save()
                                 subnet.sync()
                             else:
-                                if ip_address.ipa_os_instance_id != self.osi.id:
-                                    ip_address.ipa_os_instance_id = self.osi.id
+                                if ip_address.ipa_os_instance_id != SystemGear.osi.id:
+                                    ip_address.ipa_os_instance_id = SystemGear.osi.id
                                     ip_address.save()
-                            self.osi.sync()
+                            SystemGear.osi.sync()
                             break
                 else:
-                    local_routing_area = RoutingAreaService.find_routing_area(ra_name=self.hostname+".local")
+                    local_routing_area = RoutingAreaService.find_routing_area(ra_name=SystemGear.hostname+".local")
                     if local_routing_area is None:
-                        local_routing_area = RoutingArea(name=self.hostname+".local",
+                        local_routing_area = RoutingArea(name=SystemGear.hostname+".local",
                                                          multicast=RoutingArea.RA_MULTICAST_NOLIMIT,
                                                          ra_type=RoutingArea.RA_TYPE_VIRT,
-                                                         description=self.hostname+".local routing area")
+                                                         description=SystemGear.hostname+".local routing area")
                         local_routing_area.save()
 
-                    loopback_subnet = SubnetService.find_subnet(sb_name=self.hostname+".loopback")
+                    loopback_subnet = SubnetService.find_subnet(sb_name=SystemGear.hostname+".loopback")
                     if loopback_subnet is not None:
                         loopback_subnet.remove()
 
-                    loopback_subnet = Subnet(name=self.hostname+".loopback",
-                                             description=self.hostname + " loopback subnet",
+                    loopback_subnet = Subnet(name=SystemGear.hostname+".loopback",
+                                             description=SystemGear.hostname + " loopback subnet",
                                              routing_area_id=local_routing_area.id,
                                              ip='127.0.0.0', mask='255.0.0.0')
                     loopback_subnet.save()
-                    loopback_subnet.add_datacenter(self.datacenter)
+                    loopback_subnet.add_datacenter(SystemGear.datacenter)
 
-                    self.osi.add_subnet(loopback_subnet)
+                    SystemGear.osi.add_subnet(loopback_subnet)
 
                     ip_address = IPAddressService.find_ip_address(ipa_fqdn=nic.ipv4_fqdn)
                     if ip_address is None:
                         ip_address = IPAddress(ip_address=nic.ipv4_address, fqdn=nic.ipv4_fqdn,
-                                               ipa_subnet_id=loopback_subnet.id, ipa_osi_id=self.osi.id)
+                                               ipa_subnet_id=loopback_subnet.id, ipa_osi_id=SystemGear.osi.id)
                         ip_address.save()
                         loopback_subnet.sync()
 
@@ -450,6 +495,7 @@ class DirectoryGear(InjectorGearSkeleton):
         operating_system = component.operating_system.get()
         try:
             self.sync_operating_system(operating_system)
+            self.sync_operating_system_type(operating_system)
             self.sync_environment(operating_system)
             self.sync_team(operating_system)
 
@@ -481,12 +527,11 @@ class DirectoryGear(InjectorGearSkeleton):
 
 class MappingGear(InjectorGearSkeleton):
     def __init__(self):
-        self.hostname = socket.gethostname()
         super(MappingGear, self).__init__(
-            gear_id='ariane.community.plugin.procos.gears.cache.mapping_gear@'+self.hostname,
-            gear_name='procos_mapping_gear@'+self.hostname,
-            gear_description='Ariane ProcOS injector gear for '+self.hostname,
-            gear_admin_queue='ariane.community.plugin.procos.gears.cache.mapping_gear@'+self.hostname,
+            gear_id='ariane.community.plugin.procos.gears.cache.mapping_gear@'+SystemGear.hostname,
+            gear_name='procos_mapping_gear@'+SystemGear.hostname,
+            gear_description='Ariane ProcOS injector gear for '+SystemGear.hostname,
+            gear_admin_queue='ariane.community.plugin.procos.gears.cache.mapping_gear@'+SystemGear.hostname,
             running=False
         )
         self.update_count = 0
@@ -511,24 +556,40 @@ class MappingGear(InjectorGearSkeleton):
             self.cache(running=self.running)
 
     def synchronize_with_ariane_mapping(self, component):
+        operating_system = component.operating_system.get()
         self.update_count += 1
 
 
 class SystemGear(InjectorGearSkeleton):
+    #static reference on commons var
+    config = None
+    hostname = None
+
+    #static reference to up to date ariane directories objects linked to this System
+    datacenter = None
+    routing_areas = []
+    subnets = []
+    osi = None
+    ost = None
+    ost_company = None
+    team = None
+    environment = None
+
     def __init__(self, config):
-        self.hostname = socket.gethostname()
+        SystemGear.hostname = socket.gethostname()
+        SystemGear.config = config
         super(SystemGear, self).__init__(
-            gear_id='ariane.community.plugin.procos.gears.cache.system_gear@'+self.hostname,
-            gear_name='procos_system_gear@'+self.hostname,
-            gear_description='Ariane ProcOS system gear for '+self.hostname,
-            gear_admin_queue='ariane.community.plugin.procos.gears.cache.system_gear@'+self.hostname,
+            gear_id='ariane.community.plugin.procos.gears.cache.system_gear@'+SystemGear.hostname,
+            gear_name='procos_system_gear@'+SystemGear.hostname,
+            gear_description='Ariane ProcOS system gear for '+SystemGear.hostname,
+            gear_admin_queue='ariane.community.plugin.procos.gears.cache.system_gear@'+SystemGear.hostname,
             running=False
         )
-        self.component = SystemComponent.start(attached_gear_id=self.gear_id()).proxy()
+        self.component = SystemComponent.start(attached_gear_id=self.gear_id(), hostname=SystemGear.hostname).proxy()
         self.sleeping_period = config.sleeping_period
         self.service = None
-        self.service_name = 'system_procos@'+self.hostname+' gear'
-        self.directory_gear = DirectoryGear.start(config).proxy()
+        self.service_name = 'system_procos@'+SystemGear.hostname+' gear'
+        self.directory_gear = DirectoryGear.start().proxy()
         self.mapping_gear = MappingGear.start().proxy()
 
     def run(self):

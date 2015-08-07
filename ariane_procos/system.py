@@ -257,12 +257,13 @@ class NetworkInterfaceCard(object):
 
 
 class OperatingSystem(object):
-    def __init__(self, container_id=None, osi_id=None, datacenter_id=None, routing_area_ids=None,
-                 subnet_ids=None, environment_id=None, team_id=None,
+    def __init__(self, container_id=None, osi_id=None, ost_id=None, environment_id=None, team_id=None,
+                 datacenter_id=None, routing_area_ids=None, subnet_ids=None,
                  hostname=None, last_nics=None, nics=None, last_processs=None, processs=None):
         self.container_id = container_id
 
         self.osi_id = osi_id
+        self.ost_id = ost_id
         self.datacenter_id = datacenter_id
         self.routing_area_ids = routing_area_ids if routing_area_ids is not None else []
         self.subnet_ids = subnet_ids if subnet_ids is not None else []
@@ -311,6 +312,7 @@ class OperatingSystem(object):
             'processs': processs_json,
             'container_id': self.container_id,
             'osi_id': self.osi_id,
+            'ost_id': self.ost_id,
             'datacenter_id': self.datacenter_id,
             'routing_area_ids': self.routing_area_ids,
             'subnet_ids': self.subnet_ids,
@@ -342,7 +344,8 @@ class OperatingSystem(object):
             processs.append(Process.json_2_proc(process))
 
         return OperatingSystem(
-            container_id=json_obj['container_id'], osi_id=json_obj['osi_id'], datacenter_id=json_obj['datacenter_id'],
+            container_id=json_obj['container_id'], osi_id=json_obj['osi_id'],
+            ost_id=json_obj['ost_id'], datacenter_id=json_obj['datacenter_id'],
             environment_id=json_obj['datacenter_id'], team_id=json_obj['team_id'],
             routing_area_ids=json_obj['routing_area_ids'], subnet_ids=json_obj['subnet_ids'],
             hostname=json_obj['hostname'], last_nics=last_nics, nics=nics, last_processs=last_processs,
