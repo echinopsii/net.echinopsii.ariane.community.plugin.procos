@@ -15,9 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import os
 import socket
 import threading
 import time
+import timeit
+import traceback
+from ariane_clip3.mapping import ContainerService, Container, NodeService, Node
 from ariane_clip3.directory import DatacenterService, Datacenter, RoutingAreaService, RoutingArea, OSInstanceService, \
     OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team, \
     OSTypeService, OSType, Company
@@ -516,6 +520,7 @@ class DirectoryGear(InjectorGearSkeleton):
                     print('DEBUG - NO CHANGES WITH LAST SNIFF')
             except Exception as e:
                 print(e.__str__())
+                print(traceback.format_exc())
         else:
             print('WARN - DIRECTORIES SYNC ARE IGNORED')
 
@@ -535,6 +540,7 @@ class MappingGear(InjectorGearSkeleton):
             running=False
         )
         self.update_count = 0
+        self.osi_container = None
 
     def on_start(self):
         self.running = True
@@ -555,8 +561,79 @@ class MappingGear(InjectorGearSkeleton):
             self.running = False
             self.cache(running=self.running)
 
+    def sync_container(self, operating_system):
+        if self.osi_container is None and operating_system.container_id is not None:
+            self.osi_container = ContainerService.find_container(cid=operating_system.container_id)
+            if self.osi_container is None:
+                print('ERR: consistency error between ProcOS cache and mapping DB (' +
+                      operating_system.container_id + ')')
+                operating_system.container_id = None
+
+        if self.osi_container is None:
+            self.osi_container = Container(
+                name=SystemGear.hostname,
+                gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.hostname,
+                primary_admin_gate_name=SystemGear.config.system_context.admin_gate_protocol + ' daemon',
+                company=SystemGear.config.system_context.os_type.company.name,
+                product=SystemGear.config.system_context.os_type.name + '-' +
+                        SystemGear.config.system_context.os_type.architecture,
+                c_type='Operating System'
+            )
+            self.osi_container.save()
+            operating_system.container_id = self.osi_container.id
+
+    def sync_processs(self, operating_system):
+        if self.osi_container is None:
+            print('ERROR: operating system container is not synced')
+            return
+
+        t = timeit.default_timer()
+        for process in operating_system.processs:
+            process_map_obj = None
+            exe_tab = process.exe.split(os.path.sep)
+            name = '[' + str(process.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
+
+            if process.mapping_id is not None:
+                if process.is_node:
+                    process_map_obj = NodeService.find_node(nid=process.mapping_id)
+                else:
+                    process_map_obj = ContainerService.find_container(cid=process.mapping_id)
+
+                if process_map_obj is None or process_map_obj.name != name:
+                    print('ERR: consistency error between ProcOS cache and mapping DB (' + process.mapping_id + ')')
+                    process.mapping_id = None
+                    process_map_obj = None
+
+            if process_map_obj is None:
+                process_map_obj = Node(
+                    name=name,
+                    container=self.osi_container
+                )
+                process_map_obj.save()
+                process_map_obj.add_property(('pid', process.pid))
+                process_map_obj.add_property(('exe', process.exe))
+                process_map_obj.add_property(('cmdline', process.cmdline))
+                process_map_obj.add_property(('cwd', process.cwd))
+                process_map_obj.add_property(('creation time', process.create_time))
+                process_map_obj.add_property(('username', process.username))
+                process_map_obj.add_property(('uids', process.uids))
+                process_map_obj.add_property(('gids', process.gids))
+                if process.terminal is not None:
+                    process_map_obj.add_property(('terminal', process.terminal))
+                if process.cpu_affinity is not None:
+                    process_map_obj.add_property(('cpu_affinity', process.cpu_affinity))
+                process.mapping_id = process_map_obj.id
+        sync_proc_time = round(timeit.default_timer()-t)
+        print('time : {0}'.format(sync_proc_time))
+
     def synchronize_with_ariane_mapping(self, component):
         operating_system = component.operating_system.get()
+        try:
+            self.sync_container(operating_system)
+            self.sync_processs(operating_system)
+        except Exception as e:
+            print(e.__str__())
+            print(traceback.format_exc())
         self.update_count += 1
 
 

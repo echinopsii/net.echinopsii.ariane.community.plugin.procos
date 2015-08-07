@@ -3,7 +3,7 @@ import unittest
 import time
 from config import Config
 from connector import ArianeConnector
-from gears import DirectoryGear, SystemGear, MappingGear
+from gears import SystemGear
 
 __author__ = 'mffrench'
 

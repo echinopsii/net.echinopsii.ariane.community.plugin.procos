@@ -109,7 +109,7 @@ class Connection(object):
 
 
 class Process(object):
-    def __init__(self, mapping_id=None, is_node=None, name=None, pid=None, create_time=None, exe=None, cwd=None,
+    def __init__(self, mapping_id=None, is_node=True, name=None, pid=None, create_time=None, exe=None, cwd=None,
                  cmdline=None, username=None, cpu_affinity=None, terminal=None, connections=None, uids=None, gids=None):
         self.mapping_id = mapping_id
         self.is_node = is_node
