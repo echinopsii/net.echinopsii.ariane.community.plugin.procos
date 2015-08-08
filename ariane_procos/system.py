@@ -127,11 +127,7 @@ class Process(object):
         self.gids = gids
 
     def __eq__(self, other):
-        if self.mapping_id != other.mapping_id or self.is_node != other.is_node or self.pid != other.pid\
-                or self.name != other.name or self.create_time != other.create_time or self.exe != other.exe\
-                or self.cwd != other.cwd or self.cmdline != other.cmdline or self.username != other.username\
-                or self.cpu_affinity != other.cpu_affinity or self.terminal != other.terminal\
-                or self.connections != other.connections or self.uids != other.uids or self.gids != other.gids:
+        if self.pid != other.pid or self.name != other.name or self.create_time != other.create_time:
             return False
         else:
             return True
@@ -275,6 +271,8 @@ class OperatingSystem(object):
         self.nics = nics if nics is not None else []
         self.last_processs = last_processs if last_processs is not None else []
         self.processs = processs if processs is not None else []
+        self.new_processs = []
+        self.dead_processs = []
 
     def __eq__(self, other):
         if self.osi_id != other.osi_id or self.hostname != other.hostname:
@@ -360,6 +358,8 @@ class OperatingSystem(object):
     def sniff(self):
         self.nics = []
         self.processs = []
+        self.new_processs = []
+        self.dead_processs = []
 
         for nic_name_stat, snicstats in psutil.net_if_stats().items():
             nic = NetworkInterfaceCard(name=nic_name_stat,
@@ -412,6 +412,23 @@ class OperatingSystem(object):
                                           destination_ip=connection.raddr[0], destination_port=connection.raddr[1],
                                           status=connection.status)
                     proc.connections.append(conn)
+
+                if proc in self.last_processs:
+                    for last_proc in self.last_processs:
+                        if last_proc == proc:
+                            if last_proc.mapping_id is not None:
+                                proc.mapping_id = last_proc.mapping_id
+                                proc.is_node = last_proc.is_node
+                            else:
+                                self.new_processs.append(proc)
+                            break
+                else:
+                    self.new_processs.append(proc)
+
                 self.processs.append(proc)
             except psutil.AccessDenied:
                 pass
+
+        for process in self.last_processs:
+            if process not in self.processs:
+                self.dead_processs.append(process)

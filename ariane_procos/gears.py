@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import json
 import os
 import socket
 import threading
@@ -565,8 +566,8 @@ class MappingGear(InjectorGearSkeleton):
         if self.osi_container is None and operating_system.container_id is not None:
             self.osi_container = ContainerService.find_container(cid=operating_system.container_id)
             if self.osi_container is None:
-                print('ERR: consistency error between ProcOS cache and mapping DB (' +
-                      operating_system.container_id + ')')
+                print('ERROR: consistency error between ProcOS cache and mapping DB (' +
+                      str(operating_system.container_id) + ')')
                 operating_system.container_id = None
 
         if self.osi_container is None:
@@ -581,6 +582,19 @@ class MappingGear(InjectorGearSkeleton):
             )
             self.osi_container.save()
             operating_system.container_id = self.osi_container.id
+            print('DEBUG: operating_system.container_id : (' + SystemGear.hostname + ',' +
+                  str(operating_system.container_id) + ')')
+            datacenter_properties = {
+                Container.DC_NAME_MAPPING_FIELD: SystemGear.datacenter.name,
+                Container.DC_ADDR_MAPPING_FIELD: SystemGear.datacenter.address,
+                Container.DC_TOWN_MAPPING_FIELD: SystemGear.datacenter.town,
+                Container.DC_CNTY_MAPPING_FIELD: SystemGear.datacenter.country,
+                Container.DC_GPSA_MAPPING_FIELD: SystemGear.datacenter.gpsLatitude,
+                Container.DC_GPSN_MAPPING_FIELD: SystemGear.datacenter.gpsLongitude
+            }
+            datacenter_properties_dumped = json.dumps(datacenter_properties)
+            print('DEBUG: DC properties - ' + datacenter_properties_dumped)
+            self.osi_container.add_property(Container.DC_MAPPING_PROPERTIES, json.dumps(datacenter_properties))
 
     def sync_processs(self, operating_system):
         if self.osi_container is None:
@@ -588,21 +602,11 @@ class MappingGear(InjectorGearSkeleton):
             return
 
         t = timeit.default_timer()
-        for process in operating_system.processs:
+        print('DEBUG: ' + str(operating_system.new_processs.__len__()) + ' new processes found')
+        for process in operating_system.new_processs:
             process_map_obj = None
             exe_tab = process.exe.split(os.path.sep)
             name = '[' + str(process.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
-
-            if process.mapping_id is not None:
-                if process.is_node:
-                    process_map_obj = NodeService.find_node(nid=process.mapping_id)
-                else:
-                    process_map_obj = ContainerService.find_container(cid=process.mapping_id)
-
-                if process_map_obj is None or process_map_obj.name != name:
-                    print('ERR: consistency error between ProcOS cache and mapping DB (' + process.mapping_id + ')')
-                    process.mapping_id = None
-                    process_map_obj = None
 
             if process_map_obj is None:
                 process_map_obj = Node(
@@ -612,7 +616,7 @@ class MappingGear(InjectorGearSkeleton):
                 process_map_obj.save()
                 process_map_obj.add_property(('pid', process.pid))
                 process_map_obj.add_property(('exe', process.exe))
-                process_map_obj.add_property(('cmdline', process.cmdline))
+                #process_map_obj.add_property(('cmdline', process.cmdline))
                 process_map_obj.add_property(('cwd', process.cwd))
                 process_map_obj.add_property(('creation time', process.create_time))
                 process_map_obj.add_property(('username', process.username))
@@ -623,6 +627,26 @@ class MappingGear(InjectorGearSkeleton):
                 if process.cpu_affinity is not None:
                     process_map_obj.add_property(('cpu_affinity', process.cpu_affinity))
                 process.mapping_id = process_map_obj.id
+                print('DEBUG: new process on mapping db : (' + name + ',' + str(process.mapping_id) + ')')
+
+        print('DEBUG: ' + str(operating_system.dead_processs.__len__()) + ' old processes found')
+        for process in operating_system.dead_processs:
+            process_map_obj = None
+            exe_tab = process.exe.split(os.path.sep)
+            name = '[' + str(process.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
+            if process.mapping_id is None:
+                print('ERROR: dead process (' + name + ') has not been save on mapping db !')
+            else:
+                if process.is_node:
+                    process_map_obj = NodeService.find_node(nid=process.mapping_id)
+                else:
+                    process_map_obj = ContainerService.find_container(cid=process.mapping_id)
+                if process_map_obj is None:
+                    print('ERROR: consistency error between ProcOS cache and mapping DB (' + name + ',' +
+                          str(process.mapping_id) + ')')
+                else:
+                    process_map_obj.remove()
+
         sync_proc_time = round(timeit.default_timer()-t)
         print('time : {0}'.format(sync_proc_time))
 
