@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import json
 import os
 import socket
 import threading
@@ -23,8 +22,8 @@ import time
 import timeit
 import traceback
 from ariane_clip3.mapping import ContainerService, Container, NodeService, Node
-from ariane_clip3.directory import DatacenterService, Datacenter, RoutingAreaService, RoutingArea, OSInstanceService, \
-    OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team, \
+from ariane_clip3.directory import DatacenterService, Datacenter, RoutingAreaService, RoutingArea, OSInstanceService,\
+    OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team,\
     OSTypeService, OSType, Company
 from ariane_clip3.injector import InjectorGearSkeleton
 from components import SystemComponent
@@ -422,8 +421,8 @@ class DirectoryGear(InjectorGearSkeleton):
                                            description=routing_area_config.description)
                 routing_area.save()
                 routing_area.add_datacenter(SystemGear.datacenter)
-                operating_system.routing_area_ids.append(routing_area.id)
-                SystemGear.routing_areas.append(routing_area)
+            operating_system.routing_area_ids.append(routing_area.id)
+            SystemGear.routing_areas.append(routing_area)
 
             for subnet_config in routing_area_config.subnets:
                 if subnet_config in current_possible_subnet_config:
@@ -475,6 +474,8 @@ class DirectoryGear(InjectorGearSkeleton):
                                                          ra_type=RoutingArea.RA_TYPE_VIRT,
                                                          description=SystemGear.hostname+".local routing area")
                         local_routing_area.save()
+                    operating_system.routing_area_ids.append(local_routing_area.id)
+                    SystemGear.routing_areas.append(local_routing_area)
 
                     loopback_subnet = SubnetService.find_subnet(sb_name=SystemGear.hostname+".loopback")
                     if loopback_subnet is not None:
@@ -486,8 +487,11 @@ class DirectoryGear(InjectorGearSkeleton):
                                              ip='127.0.0.0', mask='255.0.0.0')
                     loopback_subnet.save()
                     loopback_subnet.add_datacenter(SystemGear.datacenter)
+                    local_routing_area.sync()
 
                     SystemGear.osi.add_subnet(loopback_subnet)
+                    operating_system.subnet_ids.append(loopback_subnet.id)
+                    SystemGear.subnets.append(loopback_subnet)
 
                     ip_address = IPAddressService.find_ip_address(ipa_fqdn=nic.ipv4_fqdn)
                     if ip_address is None:
@@ -562,6 +566,49 @@ class MappingGear(InjectorGearSkeleton):
             self.running = False
             self.cache(running=self.running)
 
+    def sync_container_properties(self):
+        if SystemGear.datacenter is not None:
+            datacenter_properties = {
+                Container.DC_NAME_MAPPING_FIELD: SystemGear.datacenter.name,
+                Container.DC_ADDR_MAPPING_FIELD: SystemGear.datacenter.address,
+                Container.DC_TOWN_MAPPING_FIELD: SystemGear.datacenter.town,
+                Container.DC_CNTY_MAPPING_FIELD: SystemGear.datacenter.country,
+                Container.DC_GPSA_MAPPING_FIELD: SystemGear.datacenter.gpsLatitude,
+                Container.DC_GPSN_MAPPING_FIELD: SystemGear.datacenter.gpsLongitude
+            }
+            self.osi_container.add_property((Container.DC_MAPPING_PROPERTIES, datacenter_properties))
+
+        if SystemGear.routing_areas is not None:
+            network_properties = []
+            for routing_area in SystemGear.routing_areas:
+                routing_area_subnets = []
+                for subnet in SystemGear.subnets:
+                    if subnet.id in routing_area.subnet_ids:
+                        routing_area_subnets.append(
+                            {
+                                Container.SUBNET_NAME_MAPPING_FIELD: subnet.name,
+                                Container.SUBNET_IPAD_MAPPING_FIELD: subnet.ip,
+                                Container.SUBNET_MASK_MAPPING_FIELD: subnet.mask
+                            }
+                        )
+                network_properties.append(
+                    {
+                        Container.RAREA_NAME_MAPPING_FIELD: routing_area.name,
+                        Container.RAREA_MLTC_MAPPING_FIELD: routing_area.multicast,
+                        Container.RAREA_TYPE_MAPPING_FIELD: routing_area.type,
+                        Container.RAREA_SUBNETS: routing_area_subnets
+                    }
+                )
+            if network_properties.__len__() > 0:
+                self.osi_container.add_property((Container.NETWORK_MAPPING_PROPERTIES, network_properties))
+
+        if SystemGear.team is not None:
+            team_properties = {
+                Container.TEAM_NAME_MAPPING_FIELD: SystemGear.team.name,
+                Container.TEAM_COLR_MAPPING_FIELD: SystemGear.team.color_code
+            }
+            self.osi_container.add_property((Container.TEAM_SUPPORT_MAPPING_PROPERTIES, team_properties))
+
     def sync_container(self, operating_system):
         if self.osi_container is None and operating_system.container_id is not None:
             self.osi_container = ContainerService.find_container(cid=operating_system.container_id)
@@ -584,17 +631,7 @@ class MappingGear(InjectorGearSkeleton):
             operating_system.container_id = self.osi_container.id
             print('DEBUG: operating_system.container_id : (' + SystemGear.hostname + ',' +
                   str(operating_system.container_id) + ')')
-            datacenter_properties = {
-                Container.DC_NAME_MAPPING_FIELD: SystemGear.datacenter.name,
-                Container.DC_ADDR_MAPPING_FIELD: SystemGear.datacenter.address,
-                Container.DC_TOWN_MAPPING_FIELD: SystemGear.datacenter.town,
-                Container.DC_CNTY_MAPPING_FIELD: SystemGear.datacenter.country,
-                Container.DC_GPSA_MAPPING_FIELD: SystemGear.datacenter.gpsLatitude,
-                Container.DC_GPSN_MAPPING_FIELD: SystemGear.datacenter.gpsLongitude
-            }
-            datacenter_properties_dumped = json.dumps(datacenter_properties)
-            print('DEBUG: DC properties - ' + datacenter_properties_dumped)
-            self.osi_container.add_property(Container.DC_MAPPING_PROPERTIES, json.dumps(datacenter_properties))
+        self.sync_container_properties()
 
     def sync_processs(self, operating_system):
         if self.osi_container is None:
@@ -606,6 +643,9 @@ class MappingGear(InjectorGearSkeleton):
         for process in operating_system.new_processs:
             process_map_obj = None
             exe_tab = process.exe.split(os.path.sep)
+            if exe_tab[exe_tab.__len__() - 1] == "java":
+                pass
+
             name = '[' + str(process.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
 
             if process_map_obj is None:
@@ -613,19 +653,19 @@ class MappingGear(InjectorGearSkeleton):
                     name=name,
                     container=self.osi_container
                 )
-                process_map_obj.save()
-                process_map_obj.add_property(('pid', process.pid))
-                process_map_obj.add_property(('exe', process.exe))
-                #process_map_obj.add_property(('cmdline', process.cmdline))
-                process_map_obj.add_property(('cwd', process.cwd))
-                process_map_obj.add_property(('creation time', process.create_time))
-                process_map_obj.add_property(('username', process.username))
-                process_map_obj.add_property(('uids', process.uids))
-                process_map_obj.add_property(('gids', process.gids))
+                process_map_obj.add_property(('pid', process.pid), sync=False)
+                process_map_obj.add_property(('exe', process.exe), sync=False)
+                process_map_obj.add_property(('cwd', process.cwd), sync=False)
+                process_map_obj.add_property(('creation time', process.create_time), sync=False)
+                process_map_obj.add_property(('username', process.username), sync=False)
+                process_map_obj.add_property(('uids', process.uids), sync=False)
+                process_map_obj.add_property(('gids', process.gids), sync=False)
                 if process.terminal is not None:
-                    process_map_obj.add_property(('terminal', process.terminal))
+                    process_map_obj.add_property(('terminal', process.terminal), sync=False)
                 if process.cpu_affinity is not None:
-                    process_map_obj.add_property(('cpu_affinity', process.cpu_affinity))
+                    process_map_obj.add_property(('cpu_affinity', process.cpu_affinity), sync=False)
+                process_map_obj.save()
+                process_map_obj.add_property(('cmdline', process.cmdline))
                 process.mapping_id = process_map_obj.id
                 print('DEBUG: new process on mapping db : (' + name + ',' + str(process.mapping_id) + ')')
 
@@ -697,10 +737,10 @@ class SystemGear(InjectorGearSkeleton):
         if self.sleeping_period is not None and self.sleeping_period > 0:
             self.directory_gear.init_ariane_directories(self.component)
             while self.running:
-                time.sleep(self.sleeping_period)
                 self.component.sniff()
                 self.directory_gear.synchronize_with_ariane_directories(self.component)
                 self.mapping_gear.synchronize_with_ariane_mapping(self.component)
+                time.sleep(self.sleeping_period)
 
     def on_start(self):
         self.running = True

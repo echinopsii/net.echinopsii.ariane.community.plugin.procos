@@ -75,6 +75,10 @@ class ArianeConnector(object):
 
         # Register UI entity if needed
         self.injector_ui_mapping_entity = InjectorUITreeService.find_ui_tree_entity('mappingDir')
+        if self.injector_ui_mapping_entity is None:
+            self.injector_ui_mapping_entity = InjectorUITreeEntity(uitid="mappingDir", value="Mapping",
+                                                                   uitype=InjectorUITreeEntity.entity_dir_type)
+            self.injector_ui_mapping_entity.save()
         self.injector_ui_system_entity = InjectorUITreeEntity(uitid="systemDir", value="System",
                                                               uitype=InjectorUITreeEntity.entity_dir_type,
                                                               context_address="", description="",
