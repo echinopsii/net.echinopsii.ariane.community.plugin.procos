@@ -24,10 +24,15 @@ import psutil
 __author__ = 'mffrench'
 
 
-class Connection(object):
-    def __init__(self, family=None, rtype=None, source_ip=None, source_port=None,
+class MapSocket(object):
+    def __init__(self, family=None, rtype=None, source_ip=None, source_port=None, source_endpoint_id=None,
+                 target_endpoint_id=None, link_id=None, transport_id=None,
                  destination_ip=None, destination_port=None, destination_osi_id=None, destination_subnet_id=None,
                  destination_routing_area_id=None, destination_datacenter_id=None, status=None):
+        self.source_endpoint_id = source_endpoint_id
+        self.target_endpoint_id = target_endpoint_id
+        self.link_id = link_id
+        self.transport_id = transport_id
         self.family = family
         self.type = rtype
         self.source_ip = source_ip
@@ -41,21 +46,17 @@ class Connection(object):
         self.status = status
 
     def __str__(self):
-        return json.dumps(self.connection_2_json())
+        return json.dumps(self.map_socket_2_json())
 
     def __eq__(self, other):
         if self.family != other.family or self.type != other.type or self.source_ip != other.source_ip\
                 or self.source_port != other.source_port or self.destination_ip != other.destination_ip\
-                or self.destination_port != other.destination_port \
-                or self.destination_osi_id != other.destination_osi_id\
-                or self.destination_subnet_id != other.destination_subnet_id\
-                or self.destination_routing_area_id != other.destination_routing_area_id\
-                or self.destination_datacenter_id != other.destination_datacenter_id:
+                or self.destination_port != other.destination_port:
             return False
         else:
             return True
 
-    def connection_2_json(self):
+    def map_socket_2_json(self):
         json_obj = {
             'status': self.status,
             'family': self.family,
@@ -72,8 +73,8 @@ class Connection(object):
         return json_obj
 
     @staticmethod
-    def json_2_connection(json_obj):
-        return Connection(
+    def json_2_map_socket(json_obj):
+        return MapSocket(
             status=json_obj['status'],
             family=json_obj['family'],
             rtype=json_obj['type'],
@@ -88,13 +89,13 @@ class Connection(object):
         )
 
     @staticmethod
-    def type_2_string(type):
-        if type == socket.SocketType.SOCK_STREAM:
+    def type_2_string(mstype):
+        if mstype == socket.SocketType.SOCK_STREAM:
             return 'SOCK_STREAM'
-        elif type == socket.SocketType.SOCK_DGRAM:
+        elif mstype == socket.SocketType.SOCK_DGRAM:
             return 'SOCK_DGRAM'
         else:
-            return type
+            return mstype
 
     @staticmethod
     def family_2_string(family):
@@ -110,7 +111,9 @@ class Connection(object):
 
 class Process(object):
     def __init__(self, mapping_id=None, is_node=True, name=None, pid=None, create_time=None, exe=None, cwd=None,
-                 cmdline=None, username=None, cpu_affinity=None, terminal=None, connections=None, uids=None, gids=None):
+                 cmdline=None, username=None, cpu_affinity=None, terminal=None, map_sockets=None,
+                 last_map_sockets=None, new_map_sockets=None, dead_map_sockets=None,
+                 uids=None, gids=None):
         self.mapping_id = mapping_id
         self.is_node = is_node
         self.pid = pid
@@ -122,7 +125,10 @@ class Process(object):
         self.username = username
         self.cpu_affinity = cpu_affinity
         self.terminal = terminal
-        self.connections = connections
+        self.last_map_sockets = last_map_sockets
+        self.map_sockets = map_sockets
+        self.new_map_sockets = new_map_sockets
+        self.dead_map_sockets = dead_map_sockets
         self.uids = uids
         self.gids = gids
 
@@ -136,10 +142,10 @@ class Process(object):
         return json.dumps(self.proc_2_json())
 
     def proc_2_json(self):
-        connections_json = []
-        if self.connections is not None:
-            for connection in self.connections:
-                connections_json.append(connection.connection_2_json())
+        map_sockets_json = []
+        if self.map_sockets is not None:
+            for map_socket in self.map_sockets:
+                map_sockets_json.append(map_socket.map_socket_2_json())
         json_obj = {
             'pid': self.pid,
             'name': self.name,
@@ -150,7 +156,7 @@ class Process(object):
             'username': self.username,
             'cpu_affinity': self.cpu_affinity,
             'terminal': self.terminal,
-            'connections': connections_json,
+            'sockets': map_sockets_json,
             'uids': self.uids,
             'gids': self.gids,
             'mapping_id': self.mapping_id,
@@ -160,14 +166,14 @@ class Process(object):
 
     @staticmethod
     def json_2_proc(json_obj):
-        connections = []
-        connections_json = json_obj['connections']
-        for connection_json in connections_json:
-            connections.append(Connection.json_2_connection(connection_json))
+        map_sockets = []
+        map_sockets_json = json_obj['sockets']
+        for connection_json in map_sockets_json:
+            map_sockets.append(MapSocket.json_2_map_socket(connection_json))
         return Process(pid=json_obj['pid'], name=json_obj['name'], create_time=json_obj['create_time'],
                        exe=json_obj['exe'], cwd=json_obj['cwd'], cmdline=json_obj['cmdline'],
                        username=json_obj['username'], cpu_affinity=json_obj['cpu_affinity'],
-                       terminal=json_obj['terminal'], connections=connections, uids=json_obj['uids'],
+                       terminal=json_obj['terminal'], map_sockets=map_sockets, uids=json_obj['uids'],
                        gids=json_obj['gids'], mapping_id=json_obj['mapping_id'], is_node=json_obj['is_node'])
 
 
@@ -397,21 +403,25 @@ class OperatingSystem(object):
                                psutil_proc.cpu_affinity() if hasattr(psutil_proc, 'cpu_affinity') else None,
                                terminal=psutil_proc.terminal(), uids=psutil_proc.uids().effective,
                                gids=psutil_proc.gids().effective)
-                proc.connections = []
-                for connection in psutil_proc.connections():
-                    if connection.status == psutil.CONN_LISTEN or connection.status == psutil.CONN_NONE \
-                            or connection.status == psutil.CONN_CLOSE:
-                        conn = Connection(family=Connection.family_2_string(connection.family),
-                                          rtype=Connection.type_2_string(connection.type),
-                                          source_ip=connection.laddr[0], source_port=connection.laddr[1],
-                                          status=connection.status)
+                proc.map_sockets = []
+                for psutil_connection in psutil_proc.connections():
+                    map_socket = None
+                    if psutil_connection.status == psutil.CONN_LISTEN or psutil_connection.status == psutil.CONN_NONE \
+                            or psutil_connection.status == psutil.CONN_CLOSE:
+                        map_socket = MapSocket(family=MapSocket.family_2_string(psutil_connection.family),
+                                               rtype=MapSocket.type_2_string(psutil_connection.type),
+                                               source_ip=psutil_connection.laddr[0],
+                                               source_port=psutil_connection.laddr[1],
+                                               status=psutil_connection.status)
                     else:
-                        conn = Connection(family=Connection.family_2_string(connection.family),
-                                          rtype=Connection.type_2_string(connection.type),
-                                          source_ip=connection.laddr[0], source_port=connection.laddr[1],
-                                          destination_ip=connection.raddr[0], destination_port=connection.raddr[1],
-                                          status=connection.status)
-                    proc.connections.append(conn)
+                        map_socket = MapSocket(family=MapSocket.family_2_string(psutil_connection.family),
+                                               rtype=MapSocket.type_2_string(psutil_connection.type),
+                                               source_ip=psutil_connection.laddr[0],
+                                               source_port=psutil_connection.laddr[1],
+                                               destination_ip=psutil_connection.raddr[0],
+                                               destination_port=psutil_connection.raddr[1],
+                                               status=psutil_connection.status)
+                    proc.map_sockets.append(map_socket)
 
                 if proc in self.last_processs:
                     for last_proc in self.last_processs:
@@ -421,6 +431,44 @@ class OperatingSystem(object):
                                 proc.is_node = last_proc.is_node
                             else:
                                 self.new_processs.append(proc)
+
+                            proc.last_map_sockets = copy.deepcopy(last_proc.map_sockets)
+                            for map_socket in proc.map_sockets:
+                                if map_socket in proc.last_map_sockets:
+                                    for last_map_socket in proc.last_map_sockets:
+                                        if map_socket == last_map_socket:
+                                            if map_socket.status == psutil.CONN_LISTEN \
+                                                    or map_socket.status == psutil.CONN_NONE \
+                                                    or map_socket.status == psutil.CONN_CLOSE:
+                                                if last_map_socket.source_endpoint_id is not None:
+                                                    map_socket.source_endpoint_id = \
+                                                        last_map_socket.source_endpoint_id
+                                                else:
+                                                    if proc.new_map_sockets is None:
+                                                        proc.new_map_sockets = []
+                                                    proc.new_map_sockets.append(map_socket)
+                                            else:
+                                                if last_map_socket.source_endpoint_id is not None \
+                                                        and last_map_socket.target_endpoint_id is not None \
+                                                        and last_map_socket.link_id is not None \
+                                                        and last_map_socket.transport_id is not None:
+                                                    map_socket.source_endpoint_id = last_map_socket.source_endpoint_id
+                                                    map_socket.target_endpoint_id = last_map_socket.target_endpoint_id
+                                                    map_socket.link_id = last_map_socket.link_id
+                                                    map_socket.transport_id = last_map_socket.transport_id
+                                                    map_socket.osi_id = last_map_socket.osi_id
+                                                    map_socket.subnet_id = last_map_socket.subnet_id
+                                                    map_socket.routing_area_id = last_map_socket.routing_area_id
+                                                    map_socket.datacenter_id = last_map_socket.datacenter_id
+                                                else:
+                                                    if proc.new_map_sockets is None:
+                                                        proc.new_map_sockets = []
+                                                    proc.new_map_sockets.append(map_socket)
+                            for map_socket in proc.last_map_sockets:
+                                if map_socket not in proc.map_sockets:
+                                    if proc.dead_map_sockets is None:
+                                        proc.dead_map_sockets = []
+                                    proc.dead_map_sockets.append(map_socket)
                             break
                 else:
                     self.new_processs.append(proc)

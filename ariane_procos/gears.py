@@ -21,7 +21,7 @@ import threading
 import time
 import timeit
 import traceback
-from ariane_clip3.mapping import ContainerService, Container, NodeService, Node
+from ariane_clip3.mapping import ContainerService, Container, NodeService, Node, Endpoint
 from ariane_clip3.directory import DatacenterService, Datacenter, RoutingAreaService, RoutingArea, OSInstanceService,\
     OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team,\
     OSTypeService, OSType, Company
@@ -629,9 +629,60 @@ class MappingGear(InjectorGearSkeleton):
             )
             self.osi_container.save()
             operating_system.container_id = self.osi_container.id
-            print('DEBUG: operating_system.container_id : (' + SystemGear.hostname + ',' +
-                  str(operating_system.container_id) + ')')
+            #print('DEBUG: operating_system.container_id : (' + SystemGear.hostname + ',' +
+            #      str(operating_system.container_id) + ')')
         self.sync_container_properties()
+
+    def sync_map_socket(self, operating_system):
+        if self.osi_container is None:
+            print('ERROR: operating system container is not synced')
+            return
+
+        t = timeit.default_timer()
+        for proc in operating_system.processs:
+            if proc.mapping_id is not None and proc.new_map_sockets is not None:
+                exe_tab = proc.exe.split(os.path.sep)
+                name = '[' + str(proc.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
+                print('DEBUG: ' + str(proc.new_map_sockets.__len__()) + ' new socket found for process ' + name)
+                for map_socket in proc.new_map_sockets:
+                    if map_socket.source_ip is not None and map_socket.source_port is not None:
+                        proto = None
+                        if map_socket.type == "SOCK_STREAM":
+                            proto = "tcp://"
+                        elif map_socket.type == "SOCK_DGRAM":
+                            proto = "udp://"
+                        else:
+                            print("WARN: socket type " + map_socket.type + " currently not supported !")
+                        if proto is not None:
+                            url_source = proto + map_socket.source_ip + ":" + str(map_socket.source_port)
+                            if proc.is_node:
+                                parent_node_id = proc.mapping_id
+                            else:
+                                parent_node_id = 0
+                                print("WARN: process as container not yet implemented !")
+                            if parent_node_id != 0:
+                                source_endpoint = Endpoint(url=url_source, parent_node_id=proc.mapping_id)
+                                source_endpoint.add_property(('type', map_socket.type))
+                                source_endpoint.add_property(('family', map_socket.family))
+                                source_endpoint.add_property(('status', map_socket.status))
+                                source_endpoint.save()
+                                map_socket.source_endpoint_id = source_endpoint.id
+                                #CHECK IF THIS SOURCE ENDPOINT IS NOT THE PRIMARY ADMIN GATE
+
+                                if map_socket.destination_ip is not None and map_socket.destination_port is not None:
+                                    # DEFINE REMOTE CONTAINER AND THEN REMOTE NODE
+                                    # =======
+                                    # DEFINE TARGET ENDPOINT
+                                    # =======
+                                    # DEFINE TRANSPORT
+                                    # =======
+                                    # DEFINE LINK
+                                    pass
+
+                    else:
+                        pass
+        sync_proc_time = round(timeit.default_timer()-t)
+        print('time : {0}'.format(sync_proc_time))
 
     def sync_processs(self, operating_system):
         if self.osi_container is None:
@@ -641,33 +692,27 @@ class MappingGear(InjectorGearSkeleton):
         t = timeit.default_timer()
         print('DEBUG: ' + str(operating_system.new_processs.__len__()) + ' new processes found')
         for process in operating_system.new_processs:
-            process_map_obj = None
             exe_tab = process.exe.split(os.path.sep)
-            if exe_tab[exe_tab.__len__() - 1] == "java":
-                pass
-
             name = '[' + str(process.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
-
-            if process_map_obj is None:
-                process_map_obj = Node(
-                    name=name,
-                    container=self.osi_container
-                )
-                process_map_obj.add_property(('pid', process.pid), sync=False)
-                process_map_obj.add_property(('exe', process.exe), sync=False)
-                process_map_obj.add_property(('cwd', process.cwd), sync=False)
-                process_map_obj.add_property(('creation time', process.create_time), sync=False)
-                process_map_obj.add_property(('username', process.username), sync=False)
-                process_map_obj.add_property(('uids', process.uids), sync=False)
-                process_map_obj.add_property(('gids', process.gids), sync=False)
-                if process.terminal is not None:
-                    process_map_obj.add_property(('terminal', process.terminal), sync=False)
-                if process.cpu_affinity is not None:
-                    process_map_obj.add_property(('cpu_affinity', process.cpu_affinity), sync=False)
-                process_map_obj.save()
-                process_map_obj.add_property(('cmdline', process.cmdline))
-                process.mapping_id = process_map_obj.id
-                print('DEBUG: new process on mapping db : (' + name + ',' + str(process.mapping_id) + ')')
+            process_map_obj = Node(
+                name=name,
+                container=self.osi_container
+            )
+            process_map_obj.add_property(('pid', process.pid), sync=False)
+            process_map_obj.add_property(('exe', process.exe), sync=False)
+            process_map_obj.add_property(('cwd', process.cwd), sync=False)
+            process_map_obj.add_property(('creation time', process.create_time), sync=False)
+            process_map_obj.add_property(('username', process.username), sync=False)
+            process_map_obj.add_property(('uids', process.uids), sync=False)
+            process_map_obj.add_property(('gids', process.gids), sync=False)
+            if process.terminal is not None:
+                process_map_obj.add_property(('terminal', process.terminal), sync=False)
+            if process.cpu_affinity is not None:
+                process_map_obj.add_property(('cpu_affinity', process.cpu_affinity), sync=False)
+            process_map_obj.save()
+            process_map_obj.add_property(('cmdline', process.cmdline))
+            process.mapping_id = process_map_obj.id
+            #print('DEBUG: new process on mapping db : (' + name + ',' + str(process.mapping_id) + ')')
 
         print('DEBUG: ' + str(operating_system.dead_processs.__len__()) + ' old processes found')
         for process in operating_system.dead_processs:
@@ -695,6 +740,7 @@ class MappingGear(InjectorGearSkeleton):
         try:
             self.sync_container(operating_system)
             self.sync_processs(operating_system)
+            self.sync_map_socket(operating_system)
         except Exception as e:
             print(e.__str__())
             print(traceback.format_exc())
