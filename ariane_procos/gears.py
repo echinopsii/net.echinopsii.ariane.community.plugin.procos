@@ -21,10 +21,11 @@ import threading
 import time
 import timeit
 import traceback
-from ariane_clip3.mapping import ContainerService, Container, NodeService, Node, Endpoint
+from ariane_clip3.mapping import ContainerService, Container, NodeService, Node, Endpoint, EndpointService, Transport, \
+    Link
 from ariane_clip3.directory import DatacenterService, Datacenter, RoutingAreaService, RoutingArea, OSInstanceService,\
     OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team,\
-    OSTypeService, OSType, Company
+    OSTypeService, OSType, Company, CompanyService
 from ariane_clip3.injector import InjectorGearSkeleton
 from components import SystemComponent
 from config import RoutingAreaConfig, SubnetConfig
@@ -442,11 +443,15 @@ class DirectoryGear(InjectorGearSkeleton):
         for ipv4_id in SystemGear.osi.ip_address_ids:
             ipv4 = IPAddressService.find_ip_address(ipa_id=ipv4_id)
             to_be_removed = True
-            for nic in operating_system.nics:
-                if nic.ipv4_address is not None and nic.ipv4_address == ipv4.ip_address:
-                    to_be_removed = False
-            if to_be_removed:
-                ipv4.remove()
+            if ipv4 is not None:
+                for nic in operating_system.nics:
+                    if nic is not None and nic.ipv4_address == ipv4.ip_address:
+                        to_be_removed = False
+                if to_be_removed:
+                    ipv4.remove()
+            else:
+                print("ERROR: sync error on IP ("+ipv4_id+")")
+                SystemGear.osi.ip_address_ids.remove(ipv4_id)
 
         for nic in operating_system.nics:
             if nic.ipv4_address is not None:
@@ -566,23 +571,24 @@ class MappingGear(InjectorGearSkeleton):
             self.running = False
             self.cache(running=self.running)
 
-    def sync_container_properties(self):
-        if SystemGear.datacenter is not None:
+    @staticmethod
+    def sync_container_network(container, datacenter, routing_areas, subnets):
+        if datacenter is not None:
             datacenter_properties = {
-                Container.DC_NAME_MAPPING_FIELD: SystemGear.datacenter.name,
-                Container.DC_ADDR_MAPPING_FIELD: SystemGear.datacenter.address,
-                Container.DC_TOWN_MAPPING_FIELD: SystemGear.datacenter.town,
-                Container.DC_CNTY_MAPPING_FIELD: SystemGear.datacenter.country,
-                Container.DC_GPSA_MAPPING_FIELD: SystemGear.datacenter.gpsLatitude,
-                Container.DC_GPSN_MAPPING_FIELD: SystemGear.datacenter.gpsLongitude
+                Container.DC_NAME_MAPPING_FIELD: datacenter.name,
+                Container.DC_ADDR_MAPPING_FIELD: datacenter.address,
+                Container.DC_TOWN_MAPPING_FIELD: datacenter.town,
+                Container.DC_CNTY_MAPPING_FIELD: datacenter.country,
+                Container.DC_GPSA_MAPPING_FIELD: datacenter.gpsLatitude,
+                Container.DC_GPSN_MAPPING_FIELD: datacenter.gpsLongitude
             }
-            self.osi_container.add_property((Container.DC_MAPPING_PROPERTIES, datacenter_properties))
+            container.add_property((Container.DC_MAPPING_PROPERTIES, datacenter_properties))
 
-        if SystemGear.routing_areas is not None:
+        if routing_areas is not None:
             network_properties = []
-            for routing_area in SystemGear.routing_areas:
+            for routing_area in routing_areas:
                 routing_area_subnets = []
-                for subnet in SystemGear.subnets:
+                for subnet in subnets:
                     if subnet.id in routing_area.subnet_ids:
                         routing_area_subnets.append(
                             {
@@ -600,8 +606,11 @@ class MappingGear(InjectorGearSkeleton):
                     }
                 )
             if network_properties.__len__() > 0:
-                self.osi_container.add_property((Container.NETWORK_MAPPING_PROPERTIES, network_properties))
+                container.add_property((Container.NETWORK_MAPPING_PROPERTIES, network_properties))
 
+    def sync_container_properties(self):
+        self.sync_container_network(self.osi_container, SystemGear.datacenter, SystemGear.routing_areas,
+                                    SystemGear.subnets)
         if SystemGear.team is not None:
             team_properties = {
                 Container.TEAM_NAME_MAPPING_FIELD: SystemGear.team.name,
@@ -633,6 +642,37 @@ class MappingGear(InjectorGearSkeleton):
             #      str(operating_system.container_id) + ')')
         self.sync_container_properties()
 
+    @staticmethod
+    def sync_remote_container_network(target_os_instance, target_container):
+        target_possible_datacenters = []
+        target_routing_areas = []
+        target_subnets = []
+
+        for subnet_id in target_os_instance.subnet_ids:
+            target_subnet = SubnetService.find_subnet(
+                sb_id=subnet_id
+            )
+            if target_subnet is not None and target_subnet not in target_subnets:
+                target_subnets.append(target_subnet)
+                target_routing_area = RoutingAreaService.find_routing_area(
+                    ra_id=target_subnet.routing_area_id
+                )
+                if target_routing_area is not None and target_routing_area not in target_routing_areas:
+                    target_routing_areas.append(target_routing_area)
+                    for datacenter_id in target_routing_area.dc_ids:
+                        target_possible_datacenter = DatacenterService.find_datacenter(
+                            dc_id=datacenter_id
+                        )
+                        if target_possible_datacenter is not None and \
+                                        target_possible_datacenter not in target_possible_datacenters:
+                            target_possible_datacenters.append(target_possible_datacenter)
+
+        if target_possible_datacenters.__len__() == 1:
+            target_datacenter = target_possible_datacenters[0]
+            MappingGear.sync_container_network(target_container, target_datacenter, target_routing_areas, target_subnets)
+        else:
+            print("WARN: REMOTE CONTAINER LOCALISATION HAS NOT BEEN FOUND")
+
     def sync_map_socket(self, operating_system):
         if self.osi_container is None:
             print('ERROR: operating system container is not synced')
@@ -653,34 +693,197 @@ class MappingGear(InjectorGearSkeleton):
                             proto = "udp://"
                         else:
                             print("WARN: socket type " + map_socket.type + " currently not supported !")
+
                         if proto is not None:
-                            url_source = proto + map_socket.source_ip + ":" + str(map_socket.source_port)
                             if proc.is_node:
-                                parent_node_id = proc.mapping_id
+                                source_parent_node_id = proc.mapping_id
                             else:
-                                parent_node_id = 0
+                                source_parent_node_id = 0
                                 print("WARN: process as container not yet implemented !")
-                            if parent_node_id != 0:
-                                source_endpoint = Endpoint(url=url_source, parent_node_id=proc.mapping_id)
+
+                            if source_parent_node_id != 0:
+                                source_url = proto + map_socket.source_ip + ":" + str(map_socket.source_port) + \
+                                    str(map_socket.file_descriptors) if map_socket.status != "LISTEN" else ""
+
+                                source_endpoint = Endpoint(url=source_url, parent_node_id=proc.mapping_id)
                                 source_endpoint.add_property(('type', map_socket.type))
                                 source_endpoint.add_property(('family', map_socket.family))
                                 source_endpoint.add_property(('status', map_socket.status))
+                                source_endpoint.add_property(('file descriptors', map_socket.file_descriptors))
                                 source_endpoint.save()
                                 map_socket.source_endpoint_id = source_endpoint.id
+                                #print('DEBUG: source socket endpoint on mapping db : (' + source_url + ',' +
+                                #      str(map_socket.source_endpoint_id) + ')')
                                 #CHECK IF THIS SOURCE ENDPOINT IS NOT THE PRIMARY ADMIN GATE
 
                                 if map_socket.destination_ip is not None and map_socket.destination_port is not None:
-                                    # DEFINE REMOTE CONTAINER AND THEN REMOTE NODE
-                                    # =======
-                                    # DEFINE TARGET ENDPOINT
-                                    # =======
-                                    # DEFINE TRANSPORT
-                                    # =======
-                                    # DEFINE LINK
-                                    pass
+                                    target_url = proto + map_socket.destination_ip + ":" + \
+                                                 str(map_socket.destination_port)
+
+                                    target_fqdn = None
+                                    try:
+                                        target_fqdn = socket.gethostbyaddr(map_socket.destination_ip)[0]
+                                    except socket.herror as e:
+                                        pass
+
+                                    destination_is_local = False
+                                    if map_socket.family == "AF_INET":
+                                        for nic in operating_system.nics:
+                                            if nic.ipv4_address is not None and \
+                                                            map_socket.destination_ip == nic.ipv4_address:
+                                                destination_is_local = True
+                                                #print("DEBUG: local destination endpoint " +
+                                                #      (target_fqdn if target_fqdn is not None else map_socket.destination_ip)+
+                                                #      "/" +
+                                                #      target_url)
+                                                break
+                                    elif map_socket.family == "AF_INET6":
+                                        if map_socket.destination_ip == "::127.0.0.1" or \
+                                            map_socket.destination_ip == "::1":
+                                            destination_is_local = True
+                                    elif map_socket.family == "AF_UNIX":
+                                        destination_is_local = True
+
+                                    target_container = None if not destination_is_local else self.osi_container
+                                    target_node = None
+                                    target_endpoint = None
+
+                                    if target_fqdn is not None:
+                                        target_ipa = IPAddressService.find_ip_address(ipa_fqdn=target_fqdn)
+                                        if target_ipa is not None:
+                                            target_os_instance = OSInstanceService.find_os_instance(
+                                                osi_id=target_ipa.ipa_os_instance_id
+                                            )
+                                            if target_os_instance is not None:
+                                                if target_container is None:
+                                                    target_container = ContainerService.find_container(
+                                                        primary_admin_gate_url=target_os_instance.admin_gate_uri
+                                                    )
+                                                if target_container is None:
+                                                    target_os_instance_type = OSTypeService.find_ostype(
+                                                        ost_id=target_os_instance.ost_id
+                                                    )
+                                                    product = target_os_instance_type.name + " - " + \
+                                                              target_os_instance_type.architecture \
+                                                                  if target_os_instance_type is not None else\
+                                                                  "Unknown OS Type",
+
+                                                    target_os_instance_type_cmp = CompanyService.find_company(
+                                                        cmp_id=target_os_instance_type.company_id
+                                                    ) if target_os_instance_type is not None else None
+                                                    company = target_os_instance_type_cmp.name\
+                                                        if target_os_instance_type_cmp is not None else\
+                                                        "Unknown OS Type Company"
+
+                                                    name = target_fqdn if target_fqdn is not None else\
+                                                        map_socket.destination_ip
+
+                                                    target_container = Container(
+                                                        name=name,
+                                                        gate_uri=target_os_instance.admin_gate_uri,
+                                                        primary_admin_gate_name=target_fqdn + " Primary Admin Gate",
+                                                        company=company,
+                                                        product=product,
+                                                        c_type="Operating System"
+                                                    )
+                                                    target_container.save()
+
+                                                MappingGear.sync_remote_container_network(target_os_instance,
+                                                                                          target_container)
+
+                                    if target_container is None:
+                                        target_container = Container(
+                                            name=target_fqdn if target_fqdn is not None else map_socket.destination_ip,
+                                            gate_uri="not_my_concern://"+map_socket.destination_ip,
+                                            primary_admin_gate_name="External OS Primary Admin Gate"
+                                        )
+                                        target_container.save()
+
+                                    if not destination_is_local:
+                                        target_node = NodeService.find_node(
+                                            endpoint_url=target_url
+                                        )
+                                        if target_node is None:
+                                            addr = target_fqdn if target_fqdn is not None else map_socket.destination_ip
+                                            target_node = Node(
+                                                name=addr + ':' + str(map_socket.destination_port),
+                                                container_id=target_container.id
+                                            )
+                                            target_node.save()
+                                        target_endpoint = EndpointService.find_endpoint(
+                                            url=target_url
+                                        )
+                                        if target_endpoint is None:
+                                            target_endpoint = Endpoint(
+                                                url=target_url, parent_node_id=target_node.id
+                                            )
+                                        target_endpoint.save()
+                                    else:
+                                        for proc_srv in operating_system.processs:
+                                            for srv_socket in proc_srv.map_sockets:
+                                                map_ipv4_ap = map_socket.transform_system_ipv6_to_ipv4()
+                                                srv_ipv4_ap = srv_socket.transform_system_ipv6_to_ipv4()
+
+                                                srv_source_ip = srv_ipv4_ap[0]
+                                                srv_destination_ip = srv_ipv4_ap[1]
+                                                map_source_ip = map_ipv4_ap[0]
+                                                map_destination_ip = map_ipv4_ap[1]
+
+                                                
+
+                                                if srv_source_ip == map_destination_ip and\
+                                                        srv_socket.source_port == map_socket.destination_port and\
+                                                        srv_destination_ip == map_source_ip and\
+                                                        srv_socket.destination_port == map_socket.source_port:
+                                                    if proc_srv.is_node:
+                                                        target_node = NodeService.find_node(nid=proc_srv.mapping_id)
+                                                    else:
+                                                        print("WARN: process as container not yet implemented !")
+                                                    target_url += str(srv_socket.file_descriptors)
+                                                    if target_node is not None:
+                                                        target_endpoint = EndpointService.find_endpoint(
+                                                            url=target_url
+                                                        )
+                                                        if target_endpoint is None:
+                                                            target_endpoint = Endpoint(
+                                                                url=target_url, parent_node_id=target_node.id
+                                                            )
+                                                            target_endpoint.save()
+                                                            target_endpoint.add_property(('type', srv_socket.type))
+                                                            target_endpoint.add_property(('family', srv_socket.family))
+                                                            target_endpoint.add_property(('status', srv_socket.status))
+                                                            target_endpoint.add_property(('file descriptors',
+                                                                                          srv_socket.file_descriptors))
+                                                    break
+
+                                    if target_endpoint is not None:
+                                        map_socket.destination_endpoint_id = target_endpoint.id
+                                    if target_node is not None:
+                                        map_socket.destination_node_id = target_node.id
+                                    map_socket.destination_container_id = target_container.id
+
+                                    if map_socket.destination_endpoint_id is not None and \
+                                        map_socket.source_endpoint_id is not None:
+                                        transport = Transport(name=proto)
+                                        transport.save()
+                                        if transport is not None:
+                                            link = Link(source_endpoint_id=map_socket.source_endpoint_id,
+                                                        target_endpoint_id=map_socket.destination_endpoint_id,
+                                                        transport_id=transport.id)
+                                            link.save()
+                                            map_socket.transport_id = transport.id
+                                            map_socket.link_id = link.id
+                                    else:
+                                        print('ERROR: missing destination endpoint id for ' + str(map_socket))
 
                     else:
-                        pass
+                        print('DEBUG: no source ip / port - ' + str(map_socket))
+
+            if proc.mapping_id is not None and proc.dead_map_sockets is not None:
+                exe_tab = proc.exe.split(os.path.sep)
+                name = '[' + str(proc.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
+                print('DEBUG: ' + str(proc.dead_map_sockets.__len__()) + ' new socket found for process ' + name)
+
         sync_proc_time = round(timeit.default_timer()-t)
         print('time : {0}'.format(sync_proc_time))
 
@@ -694,6 +897,7 @@ class MappingGear(InjectorGearSkeleton):
         for process in operating_system.new_processs:
             exe_tab = process.exe.split(os.path.sep)
             name = '[' + str(process.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
+
             process_map_obj = Node(
                 name=name,
                 container=self.osi_container

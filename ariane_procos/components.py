@@ -18,6 +18,7 @@
 import datetime
 import json
 import socket
+import traceback
 from ariane_clip3.injector import InjectorComponentSkeleton, InjectorCachedComponent
 from system import OperatingSystem
 
@@ -49,7 +50,11 @@ class SystemComponent(InjectorComponentSkeleton):
         return self.operating_system.operating_system_2_json()
 
     def sniff(self):
-        self.cache(refreshing=True, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
-        self.operating_system.update()
-        self.cache(refreshing=False, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
-        self.version += 1
+        try:
+            self.cache(refreshing=True, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
+            self.operating_system.update()
+            self.cache(refreshing=False, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
+            self.version += 1
+        except Exception as e:
+            print(e.__str__())
+            print(traceback.format_exc())

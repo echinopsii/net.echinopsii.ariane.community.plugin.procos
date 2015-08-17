@@ -17,6 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import copy
 import json
+import os
 import socket
 import struct
 import psutil
@@ -25,25 +26,31 @@ __author__ = 'mffrench'
 
 
 class MapSocket(object):
-    def __init__(self, family=None, rtype=None, source_ip=None, source_port=None, source_endpoint_id=None,
-                 target_endpoint_id=None, link_id=None, transport_id=None,
-                 destination_ip=None, destination_port=None, destination_osi_id=None, destination_subnet_id=None,
-                 destination_routing_area_id=None, destination_datacenter_id=None, status=None):
-        self.source_endpoint_id = source_endpoint_id
-        self.target_endpoint_id = target_endpoint_id
-        self.link_id = link_id
-        self.transport_id = transport_id
-        self.family = family
-        self.type = rtype
+    def __init__(self, source_ip=None, source_port=None, source_endpoint_id=None,
+                 destination_ip=None, destination_port=None, destination_osi_id=None,
+                 destination_subnet_id=None, destination_routing_area_id=None, destination_datacenter_id=None,
+                 destination_endpoint_id=None, destination_node_id=None, destination_container_id=None,
+                 family=None, rtype=None, status=None, link_id=None, transport_id=None, file_descriptors=None):
         self.source_ip = source_ip
         self.source_port = source_port
+        self.source_endpoint_id = source_endpoint_id
+
         self.destination_ip = destination_ip
         self.destination_port = destination_port
         self.destination_osi_id = destination_osi_id
         self.destination_subnet_id = destination_subnet_id
         self.destination_routing_area_id = destination_routing_area_id
         self.destination_datacenter_id = destination_datacenter_id
+        self.destination_endpoint_id = destination_endpoint_id
+        self.destination_node_id = destination_node_id
+        self.destination_container_id = destination_container_id
+
+        self.file_descriptors = file_descriptors if file_descriptors is not None else []
         self.status = status
+        self.family = family
+        self.type = rtype
+        self.link_id = link_id
+        self.transport_id = transport_id
 
     def __str__(self):
         return json.dumps(self.map_socket_2_json())
@@ -56,19 +63,49 @@ class MapSocket(object):
         else:
             return True
 
+    def transform_system_ipv6_to_ipv4(self):
+        source_ip = self.source_ip
+        destination_ip = self.destination_ip
+        if self.family == "AF_INET6":
+            if self.destination_ip is not None:
+                if self.destination_ip == "::127.0.0.1" or \
+                        self.destination_ip == "::1":
+                    destination_ip = "127.0.0.1"
+                elif self.destination_ip == "::":
+                    destination_ip = "0.0.0.0"
+                else:
+                    print("WARN - IPv6 ADDR not supported " + self.destination_ip)
+
+            if self.source_ip is not None:
+                if self.source_ip == "::127.0.0.1" or \
+                        self.source_ip == "::1":
+                    source_ip = "127.0.0.1"
+                elif self.source_ip == "::":
+                    source_ip = "0.0.0.0"
+                else:
+                    print("WARN - IPv6 ADDR not supported " + self.source_ip)
+        return source_ip, destination_ip
+
     def map_socket_2_json(self):
         json_obj = {
             'status': self.status,
             'family': self.family,
             'type': self.type,
+            'file_descriptors': self.file_descriptors,
+            'link_id': self.link_id,
+            'transport_id': self.transport_id,
             'source_ip': self.source_ip,
             'source_port': self.source_port,
+            'source_endpoint_id': self.source_endpoint_id,
             'destination_ip': self.destination_ip,
             'destination_port': self.destination_port,
             'destination_osi_id': self.destination_osi_id,
             'destination_subnet_id': self.destination_subnet_id,
             'destination_routing_area_id': self.destination_routing_area_id,
-            'destination_datacenter_id': self.destination_datacenter_id
+            'destination_datacenter_id': self.destination_datacenter_id,
+            'destination_endpoint_id': self.destination_endpoint_id,
+            'destination_node_id': self.destination_node_id,
+            'destination_container_id': self.destination_container_id
         }
         return json_obj
 
@@ -78,14 +115,21 @@ class MapSocket(object):
             status=json_obj['status'],
             family=json_obj['family'],
             rtype=json_obj['type'],
+            file_descriptors=json_obj['file_descriptors'],
+            link_id=json_obj['link_id'],
+            transport_id=json_obj['transport_id'],
             source_ip=json_obj['source_ip'],
             source_port=json_obj['source_port'],
+            source_endpoint_id=json_obj['source_endpoint_id'],
             destination_ip=json_obj['destination_ip'],
             destination_port=json_obj['destination_port'],
             destination_osi_id=json_obj['destination_osi_id'],
             destination_subnet_id=json_obj['destination_subnet_id'],
             destination_routing_area_id=json_obj['destination_routing_area_id'],
-            destination_datacenter_id=json_obj['destination_datacenter_id']
+            destination_datacenter_id=json_obj['destination_datacenter_id'],
+            destination_endpoint_id=json_obj['destination_endpoint_id'],
+            destination_node_id=json_obj['destination_node_id'],
+            destination_container_id=json_obj['destination_container_id']
         )
 
     @staticmethod
@@ -395,6 +439,7 @@ class OperatingSystem(object):
 
         for pid in psutil.pids():
             try:
+                #pid = 9626
                 psutil_proc = psutil.Process(pid)
                 proc = Process(pid=pid, name=psutil_proc.name(), create_time=psutil_proc.create_time(),
                                exe=psutil_proc.exe(), cwd=psutil_proc.cwd(), cmdline=psutil_proc.cmdline(),
@@ -421,7 +466,10 @@ class OperatingSystem(object):
                                                destination_ip=psutil_connection.raddr[0],
                                                destination_port=psutil_connection.raddr[1],
                                                status=psutil_connection.status)
-                    proc.map_sockets.append(map_socket)
+                    if map_socket not in proc.map_sockets:
+                        proc.map_sockets.append(map_socket)
+                    map_socket.file_descriptors.append(psutil_connection.fd)
+                    #print("DEBUG " + str(psutil_connection))
 
                 if proc in self.last_processs:
                     for last_proc in self.last_processs:
@@ -430,6 +478,9 @@ class OperatingSystem(object):
                                 proc.mapping_id = last_proc.mapping_id
                                 proc.is_node = last_proc.is_node
                             else:
+                                exe_tab = proc.exe.split(os.path.sep)
+                                name = '[' + str(proc.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
+                                #print('DEBUG: process not saved on DB correctly ' + name)
                                 self.new_processs.append(proc)
 
                             proc.last_map_sockets = copy.deepcopy(last_proc.map_sockets)
@@ -449,17 +500,22 @@ class OperatingSystem(object):
                                                     proc.new_map_sockets.append(map_socket)
                                             else:
                                                 if last_map_socket.source_endpoint_id is not None \
-                                                        and last_map_socket.target_endpoint_id is not None \
+                                                        and last_map_socket.destination_endpoint_id is not None \
                                                         and last_map_socket.link_id is not None \
                                                         and last_map_socket.transport_id is not None:
                                                     map_socket.source_endpoint_id = last_map_socket.source_endpoint_id
-                                                    map_socket.target_endpoint_id = last_map_socket.target_endpoint_id
+                                                    map_socket.osi_id = last_map_socket.destination_osi_id
+                                                    map_socket.subnet_id = last_map_socket.destination_subnet_id
+                                                    map_socket.routing_area_id = last_map_socket.destination_routing_area_id
+                                                    map_socket.datacenter_id = last_map_socket.destination_datacenter_id
+                                                    map_socket.destination_endpoint_id = \
+                                                        last_map_socket.destination_endpoint_id
+                                                    map_socket.destination_node_id = \
+                                                        last_map_socket.destination_node_id
+                                                    map_socket.destination_container_id = \
+                                                        last_map_socket.destination_container_id
                                                     map_socket.link_id = last_map_socket.link_id
                                                     map_socket.transport_id = last_map_socket.transport_id
-                                                    map_socket.osi_id = last_map_socket.osi_id
-                                                    map_socket.subnet_id = last_map_socket.subnet_id
-                                                    map_socket.routing_area_id = last_map_socket.routing_area_id
-                                                    map_socket.datacenter_id = last_map_socket.datacenter_id
                                                 else:
                                                     if proc.new_map_sockets is None:
                                                         proc.new_map_sockets = []
