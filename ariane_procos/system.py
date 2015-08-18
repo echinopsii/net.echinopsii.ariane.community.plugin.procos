@@ -63,28 +63,60 @@ class MapSocket(object):
         else:
             return True
 
+    @staticmethod
+    def ipv6_2_ipv4(ipv6):
+        ipv4 = ipv6
+        if ipv6.startswith("::127"):
+            ipv4 = ipv6.split("::")[1]
+        elif ipv6.lower().startswith("::ffff:"):
+            ipv4 = ipv6.lower().split("::ffff:")[1]
+        elif ipv6 == "::1":
+            ipv4 = "127.0.0.1"
+        elif ipv6 == "::":
+            ipv4 = "0.0.0.0"
+        else:
+            print("WARN - IPv6 ADDR not supported " + ipv6)
+        return ipv4
+
     def transform_system_ipv6_to_ipv4(self):
         source_ip = self.source_ip
         destination_ip = self.destination_ip
         if self.family == "AF_INET6":
             if self.destination_ip is not None:
-                if self.destination_ip == "::127.0.0.1" or \
-                        self.destination_ip == "::1":
-                    destination_ip = "127.0.0.1"
-                elif self.destination_ip == "::":
-                    destination_ip = "0.0.0.0"
-                else:
-                    print("WARN - IPv6 ADDR not supported " + self.destination_ip)
-
+                destination_ip = MapSocket.ipv6_2_ipv4(self.destination_ip)
             if self.source_ip is not None:
-                if self.source_ip == "::127.0.0.1" or \
-                        self.source_ip == "::1":
-                    source_ip = "127.0.0.1"
-                elif self.source_ip == "::":
-                    source_ip = "0.0.0.0"
-                else:
-                    print("WARN - IPv6 ADDR not supported " + self.source_ip)
+                source_ip = MapSocket.ipv6_2_ipv4(self.source_ip)
         return source_ip, destination_ip
+
+    def is_local_destination(self, operating_system):
+        destination_is_local = False
+        if self.family == "AF_INET":
+            for nic in operating_system.nics:
+                if nic.ipv4_address is not None and \
+                                self.destination_ip == nic.ipv4_address:
+                    destination_is_local = True
+                    #print("DEBUG: local destination endpoint " +
+                    #      (target_fqdn if target_fqdn is not None else map_socket.destination_ip)+
+                    #      "/" +
+                    #      target_url)
+                    break
+        elif self.family == "AF_INET6":
+            if self.destination_ip.startswith("::127") or \
+                            self.destination_ip == "::1":
+                destination_is_local = True
+            else:
+                for nic in operating_system.nics:
+                    if nic.ipv6_address is not None and \
+                                    self.destination_ip == nic.ipv6_address:
+                        destination_is_local = True
+                        #print("DEBUG: local destination endpoint " +
+                        #      (target_fqdn if target_fqdn is not None else map_socket.destination_ip)+
+                        #      "/" +
+                        #      target_url)
+                        break
+        elif self.family == "AF_UNIX":
+            destination_is_local = True
+        return destination_is_local
 
     def map_socket_2_json(self):
         json_obj = {
@@ -229,7 +261,8 @@ class NicDuplex(object):
 
 class NetworkInterfaceCard(object):
     def __init__(self, nic_id=None, name=None, mac_address=None, duplex=None, speed=None, mtu=None,
-                 ipv4_id=None, ipv4_address=None, ipv4_mask=None, ipv4_broadcast=None, ipv4_fqdn=None):
+                 ipv4_id=None, ipv4_address=None, ipv4_mask=None, ipv4_broadcast=None, ipv4_fqdn=None,
+                 ipv6_address=None, ipv6_mask=None):
         self.nic_id = nic_id
         self.name = name
         self.mac_address = mac_address
@@ -241,6 +274,8 @@ class NetworkInterfaceCard(object):
         self.ipv4_mask = ipv4_mask
         self.ipv4_broadcast = ipv4_broadcast
         self.ipv4_fqdn = ipv4_fqdn
+        self.ipv6_address = ipv6_address
+        self.ipv6_mask = ipv6_mask
 
     def __eq__(self, other):
         if self.nic_id != other.nic_id or self.name != other.name or self.mac_address != other.mac_address\
@@ -267,7 +302,9 @@ class NetworkInterfaceCard(object):
             'ipv4_address': self.ipv4_address,
             'ipv4_mask': self.ipv4_mask,
             'ipv4_broadcast': self.ipv4_broadcast,
-            'ipv4_fqdn': self.ipv4_fqdn
+            'ipv4_fqdn': self.ipv4_fqdn,
+            'ipv6_address': self.ipv6_address,
+            'ipv6_mask': self.ipv6_mask
         }
         return json_obj
 
@@ -288,7 +325,8 @@ class NetworkInterfaceCard(object):
                                     speed=json_obj['speed'], mtu=json_obj['mtu'],
                                     ipv4_address=json_obj['ipv4_address'], ipv4_mask=json_obj['ipv4_mask'],
                                     ipv4_broadcast=json_obj['ipv4_broadcast'], ipv4_fqdn=json_obj['ipv4_fqdn'],
-                                    ipv4_id=json_obj['ipv4_id'])
+                                    ipv4_id=json_obj['ipv4_id'], ipv6_address=json_obj['ipv6_address'],
+                                    ipv6_mask=json_obj['ipv6_mask'])
 
     @staticmethod
     def duplex_2_string(duplex):
@@ -431,6 +469,8 @@ class OperatingSystem(object):
                             except socket.herror:
                                 nic.ipv4_fqdn = nic_name_stat + '.' + socket.gethostname()
                         elif snic.family == socket.AddressFamily.AF_INET6:
+                            nic.ipv6_address = snic.address
+                            nic.ipv6_mask = snic.netmask
                             #ARIANE SERVER DO NOT MANAGE IPv6 CURRENTLY
                             pass
                         else:
@@ -439,7 +479,7 @@ class OperatingSystem(object):
 
         for pid in psutil.pids():
             try:
-                #pid = 9626
+                #pid = 12127
                 psutil_proc = psutil.Process(pid)
                 proc = Process(pid=pid, name=psutil_proc.name(), create_time=psutil_proc.create_time(),
                                exe=psutil_proc.exe(), cwd=psutil_proc.cwd(), cmdline=psutil_proc.cmdline(),
