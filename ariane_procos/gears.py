@@ -29,7 +29,7 @@ from ariane_clip3.directory import DatacenterService, Datacenter, RoutingAreaSer
 from ariane_clip3.injector import InjectorGearSkeleton
 from components import SystemComponent
 from config import RoutingAreaConfig, SubnetConfig
-from system import NetworkInterfaceCard
+from system import NetworkInterfaceCard, MapSocket
 
 __author__ = 'mffrench'
 
@@ -722,28 +722,23 @@ class MappingGear(InjectorGearSkeleton):
 
                                     target_fqdn = None
                                     try:
-                                        target_fqdn = socket.gethostbyaddr(map_socket.destination_ip)[0]
+                                        if map_socket.family == "AF_INET":
+                                            target_fqdn = socket.gethostbyaddr(map_socket.destination_ip)[0]
+                                        elif map_socket.family == "AF_INET6":
+                                            target_fqdn = socket.gethostbyaddr(MapSocket.ipv6_2_ipv4(map_socket.destination_ip))[0]
+
                                     except socket.herror as e:
+                                        #print("DEBUG: " + str(map_socket))
+                                        #print("DEBUG: " + e.__str__())
+                                        #print("DEBUG: \n" + traceback.format_exc())
+                                        pass
+                                    except OSError as e:
+                                        print("DEBUG: " + str(map_socket))
+                                        print("DEBUG: " + e.__str__())
+                                        print("DEBUG: \n" + traceback.format_exc())
                                         pass
 
-                                    destination_is_local = False
-                                    if map_socket.family == "AF_INET":
-                                        for nic in operating_system.nics:
-                                            if nic.ipv4_address is not None and \
-                                                            map_socket.destination_ip == nic.ipv4_address:
-                                                destination_is_local = True
-                                                #print("DEBUG: local destination endpoint " +
-                                                #      (target_fqdn if target_fqdn is not None else map_socket.destination_ip)+
-                                                #      "/" +
-                                                #      target_url)
-                                                break
-                                    elif map_socket.family == "AF_INET6":
-                                        if map_socket.destination_ip == "::127.0.0.1" or \
-                                            map_socket.destination_ip == "::1":
-                                            destination_is_local = True
-                                    elif map_socket.family == "AF_UNIX":
-                                        destination_is_local = True
-
+                                    destination_is_local = map_socket.is_local_destination(operating_system)
                                     target_container = None if not destination_is_local else self.osi_container
                                     target_node = None
                                     target_endpoint = None
@@ -882,7 +877,8 @@ class MappingGear(InjectorGearSkeleton):
             if proc.mapping_id is not None and proc.dead_map_sockets is not None:
                 exe_tab = proc.exe.split(os.path.sep)
                 name = '[' + str(proc.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
-                print('DEBUG: ' + str(proc.dead_map_sockets.__len__()) + ' new socket found for process ' + name)
+                print('DEBUG: ' + str(proc.dead_map_sockets.__len__()) + ' dead socket found for process ['
+                      + str(proc.mapping_id) + ']' + name)
 
         sync_proc_time = round(timeit.default_timer()-t)
         print('time : {0}'.format(sync_proc_time))
@@ -985,11 +981,11 @@ class SystemGear(InjectorGearSkeleton):
 
     def run(self):
         if self.sleeping_period is not None and self.sleeping_period > 0:
-            self.directory_gear.init_ariane_directories(self.component)
+            self.directory_gear.init_ariane_directories(self.component).get()
             while self.running:
-                self.component.sniff()
-                self.directory_gear.synchronize_with_ariane_directories(self.component)
-                self.mapping_gear.synchronize_with_ariane_mapping(self.component)
+                self.component.sniff().get()
+                self.directory_gear.synchronize_with_ariane_directories(self.component).get()
+                self.mapping_gear.synchronize_with_ariane_mapping(self.component).get()
                 time.sleep(self.sleeping_period)
 
     def on_start(self):
