@@ -450,7 +450,7 @@ class DirectoryGear(InjectorGearSkeleton):
                 if to_be_removed:
                     ipv4.remove()
             else:
-                print("ERROR: sync error on IP ("+ipv4_id+")")
+                print("ERROR: sync error on IP ("+str(ipv4_id)+")")
                 SystemGear.osi.ip_address_ids.remove(ipv4_id)
 
         for nic in operating_system.nics:
@@ -824,8 +824,6 @@ class MappingGear(InjectorGearSkeleton):
                                                 map_source_ip = map_ipv4_ap[0]
                                                 map_destination_ip = map_ipv4_ap[1]
 
-                                                
-
                                                 if srv_source_ip == map_destination_ip and\
                                                         srv_socket.source_port == map_socket.destination_port and\
                                                         srv_destination_ip == map_source_ip and\
@@ -879,6 +877,15 @@ class MappingGear(InjectorGearSkeleton):
                 name = '[' + str(proc.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
                 print('DEBUG: ' + str(proc.dead_map_sockets.__len__()) + ' dead socket found for process ['
                       + str(proc.mapping_id) + ']' + name)
+                for map_socket in proc.dead_map_sockets:
+                    if map_socket.source_endpoint_id is not None:
+                        source_endpoint = EndpointService.find_endpoint(eid=map_socket.source_endpoint_id)
+                        if source_endpoint is not None:
+                            source_endpoint.remove()
+                    if map_socket.destination_endpoint_id is not None:
+                        target_endpoint = EndpointService.find_endpoint(eid=map_socket.destination_endpoint_id)
+                        if target_endpoint is not None:
+                            target_endpoint.remove()
 
         sync_proc_time = round(timeit.default_timer()-t)
         print('time : {0}'.format(sync_proc_time))

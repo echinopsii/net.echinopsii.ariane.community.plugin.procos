@@ -488,8 +488,15 @@ class OperatingSystem(object):
                                psutil_proc.cpu_affinity() if hasattr(psutil_proc, 'cpu_affinity') else None,
                                terminal=psutil_proc.terminal(), uids=psutil_proc.uids().effective,
                                gids=psutil_proc.gids().effective)
+
+                try:
+                    proc_connections = psutil_proc.connections()
+                except ProcessLookupError as e:
+                    proc_connections = []
+
                 proc.map_sockets = []
-                for psutil_connection in psutil_proc.connections():
+
+                for psutil_connection in proc_connections:
                     map_socket = None
                     if psutil_connection.status == psutil.CONN_LISTEN or psutil_connection.status == psutil.CONN_NONE \
                             or psutil_connection.status == psutil.CONN_CLOSE:
@@ -546,7 +553,8 @@ class OperatingSystem(object):
                                                     map_socket.source_endpoint_id = last_map_socket.source_endpoint_id
                                                     map_socket.osi_id = last_map_socket.destination_osi_id
                                                     map_socket.subnet_id = last_map_socket.destination_subnet_id
-                                                    map_socket.routing_area_id = last_map_socket.destination_routing_area_id
+                                                    map_socket.routing_area_id = \
+                                                        last_map_socket.destination_routing_area_id
                                                     map_socket.datacenter_id = last_map_socket.destination_datacenter_id
                                                     map_socket.destination_endpoint_id = \
                                                         last_map_socket.destination_endpoint_id
@@ -560,11 +568,14 @@ class OperatingSystem(object):
                                                     if proc.new_map_sockets is None:
                                                         proc.new_map_sockets = []
                                                     proc.new_map_sockets.append(map_socket)
+
                             for map_socket in proc.last_map_sockets:
                                 if map_socket not in proc.map_sockets:
-                                    if proc.dead_map_sockets is None:
-                                        proc.dead_map_sockets = []
-                                    proc.dead_map_sockets.append(map_socket)
+                                    if map_socket.source_endpoint_id is not None or \
+                                            map_socket.destination_endpoint_id is not None:
+                                        if proc.dead_map_sockets is None:
+                                            proc.dead_map_sockets = []
+                                        proc.dead_map_sockets.append(map_socket)
                             break
                 else:
                     self.new_processs.append(proc)
