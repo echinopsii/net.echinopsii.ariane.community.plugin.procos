@@ -841,12 +841,12 @@ class MappingGear(InjectorGearSkeleton):
                                                             target_endpoint = Endpoint(
                                                                 url=target_url, parent_node_id=target_node.id
                                                             )
-                                                            target_endpoint.save()
                                                             target_endpoint.add_property(('type', srv_socket.type))
                                                             target_endpoint.add_property(('family', srv_socket.family))
                                                             target_endpoint.add_property(('status', srv_socket.status))
                                                             target_endpoint.add_property(('file descriptors',
                                                                                           srv_socket.file_descriptors))
+                                                            target_endpoint.save()
                                                     break
 
                                     if target_endpoint is not None:
