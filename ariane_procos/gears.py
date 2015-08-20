@@ -673,6 +673,18 @@ class MappingGear(InjectorGearSkeleton):
         else:
             print("WARN: REMOTE CONTAINER LOCALISATION HAS NOT BEEN FOUND")
 
+    @staticmethod
+    def sync_remote_container_team(target_os_instance, target_container):
+        teams_props = []
+        for team_id in target_os_instance.team_ids:
+            team = TeamService.find_team(team_id)
+            team_properties = {
+                Container.TEAM_NAME_MAPPING_FIELD: team.name,
+                Container.TEAM_COLR_MAPPING_FIELD: team.color_code
+            }
+            teams_props.append(team_properties)
+        target_container.add_property((Container.TEAM_SUPPORT_MAPPING_PROPERTIES, teams_props))
+
     def sync_map_socket(self, operating_system):
         if self.osi_container is None:
             print('ERROR: operating system container is not synced')
@@ -782,10 +794,10 @@ class MappingGear(InjectorGearSkeleton):
                                                         c_type="Operating System"
                                                     )
                                                     target_container.save()
-
-                                                MappingGear.sync_remote_container_network(target_os_instance,
-                                                                                          target_container)
-
+                                            MappingGear.sync_remote_container_network(target_os_instance,
+                                                                                      target_container)
+                                            MappingGear.sync_remote_container_team(target_os_instance,
+                                                                                   target_container)
                                     if target_container is None:
                                         target_container = Container(
                                             name=target_fqdn if target_fqdn is not None else map_socket.destination_ip,
@@ -988,16 +1000,23 @@ class SystemGear(InjectorGearSkeleton):
 
     def run(self):
         if self.sleeping_period is not None and self.sleeping_period > 0:
-            self.directory_gear.init_ariane_directories(self.component).get()
             while self.running:
-                self.component.sniff().get()
-                self.directory_gear.synchronize_with_ariane_directories(self.component).get()
-                self.mapping_gear.synchronize_with_ariane_mapping(self.component).get()
                 time.sleep(self.sleeping_period)
+                if self.running:
+                    self.component.sniff().get()
+                if self.running:
+                    self.directory_gear.synchronize_with_ariane_directories(self.component)
+                if self.running:
+                    self.mapping_gear.synchronize_with_ariane_mapping(self.component)
 
     def on_start(self):
         self.running = True
         self.cache(running=self.running)
+        self.directory_gear.init_ariane_directories(self.component).get()
+        self.component.sniff().get()
+        self.directory_gear.synchronize_with_ariane_directories(self.component).get()
+        self.mapping_gear.synchronize_with_ariane_mapping(self.component).get()
+        print("DEBUG: INIT DONE. STARTING SYSTEM GEAR LOOP...")
         self.service = threading.Thread(target=self.run, name=self.service_name)
         self.service.start()
 
