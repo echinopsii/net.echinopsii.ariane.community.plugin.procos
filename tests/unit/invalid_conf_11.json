@@ -1,0 +1,71 @@
+{
+    "ariane_server": {
+        "rest_base_url": "",
+        "rest_user": "",
+        "rest_password": "",
+        "rbmq_host": "",
+        "rbmq_port": "",
+        "rbmq_user": "",
+        "rbmq_password": "",
+        "rbmq_vhost": ""
+    },
+    "ariane_procos": {
+        "sleeping_period": 60,
+        "log_conf_file_path": "/some/log/file/path",
+        "potential_datacenters": [
+            {
+                "name": "Fake Datacenter",
+                "description": "Fake Datacenter for test purpose",
+                "address": "1, rue Victor Grignard",
+                "zipcode": 69100,
+                "town": "Villeurbanne",
+                "country": "France",
+                "gps_lat": 45.784094,
+                "gps_lng": 4.869040,
+                "routing_areas": [
+                    {
+                        "name": "FakeDC",
+                        "multicast": "FILTERED",
+                        "type": "LAN",
+                        "description": "FakeDC routing area",
+                        "subnets": [
+                            {
+                                "name": "FakeDC wired 1",
+                                "description": "FakeDC wired 1 subnet",
+                                "subnet_ip": "192.169.1.0",
+                                "subnet_mask": "255.255.255.0"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "system_context": {
+            "description": "Fake Server",
+            "admin_gate": {
+                "protocol": "ssh://",
+                "port": 22
+            },
+            "embedding_osi_hostname": "",
+            "type": {
+                "name": "Linux Debian 9",
+                "architecture": "x86_64",
+                "supporting_company": {
+                    "name": "Debian Community",
+                    "description": "Debian"
+                }
+            }
+        },
+        "organization_context": {
+            "environment": {
+                "name": "DEV",
+                "description": "DEV environment"
+            },
+            "team": {
+                "name": "ARdev",
+                "color_code": "cc6c4a",
+                "description": "Ariane DEV team"
+            }
+        }
+    }
+}

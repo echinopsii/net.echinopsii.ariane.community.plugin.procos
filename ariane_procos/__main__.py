@@ -16,29 +16,32 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import argparse
+import json
 import logging
+import logging.config
+import socket
 import sys
 import signal
 import time
 from config import Config
-from connector import ArianeConnector
-from gears import SystemGear
+
 
 __author__ = 'mffrench'
 
-LOGGER = logging.getLogger(__name__)
-
 ariane_connector = None
 config_path = "/etc/ariane/procos.json"
-config = None
+ariane_procos_config = None
 system_gear = None
 
 
 def shutdown_handle(signum, frame):
+    LOGGER.info("Ariane ProcOS@" + socket.gethostname() + " is stopping...")
     if system_gear is not None:
         system_gear.stop().get()
     if ariane_connector is not None:
+        time.sleep(5)
         ariane_connector.stop()
+    LOGGER.info("Ariane ProcOS@" + socket.gethostname() + " has been shutdown...")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--configuration",
@@ -49,14 +52,30 @@ if args.configuration:
     config_path = args.configuration
 
 try:
-    config = Config().parse(config_path)
+    ariane_procos_config = Config().parse(config_path)
 except Exception as e:
     print('Ariane ProcOS plugin config issue: ' + e.__str__())
+    exit(1)
 
-if config is not None:
-    ariane_connector = ArianeConnector(config)
+try:
+    with open(ariane_procos_config.log_conf_file_path, 'rt') as f:
+        log_conf = json.load(f)
+    logging.config.dictConfig(log_conf)
+except Exception as e:
+    print("Error while loading configuration file: " + e.__str__())
+    logging.basicConfig(format='[%(levelname)s]%(asctime)s - %(name)s - %(message)s', level=logging.WARN)
+
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.INFO)
+
+from connector import ArianeConnector
+from gears import SystemGear
+
+if ariane_procos_config is not None:
+    ariane_connector = ArianeConnector(ariane_procos_config)
     if ariane_connector.ready:
         signal.signal(signal.SIGINT, shutdown_handle)
         signal.signal(signal.SIGTERM, shutdown_handle)
-        system_gear = SystemGear.start(config=config).proxy()
+        system_gear = SystemGear.start(config=ariane_procos_config).proxy()
+        LOGGER.info("Ariane ProcOS@" + socket.gethostname() + " has been started...")
         signal.pause()

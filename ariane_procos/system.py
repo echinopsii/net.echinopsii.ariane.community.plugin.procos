@@ -577,7 +577,7 @@ class OperatingSystem(object):
 
                 self.processs.append(proc)
             except psutil.AccessDenied:
-                LOGGER.info("access denied for process " + str(pid))
+                LOGGER.debug("access denied for process " + str(pid))
 
         for process in self.last_processs:
             if process not in self.processs:

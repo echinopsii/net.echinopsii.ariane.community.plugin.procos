@@ -59,7 +59,6 @@ class DirectoryGear(InjectorGearSkeleton):
             self.running = False
             self.cache(running=self.running)
         self.cached_gear_actor.remove().get()
-        self.cached_gear_actor.stop()
 
     def gear_start(self):
         self.on_start()
@@ -564,7 +563,6 @@ class MappingGear(InjectorGearSkeleton):
             self.running = False
             self.cache(running=self.running)
         self.cached_gear_actor.remove().get()
-        self.cached_gear_actor.stop()
 
     def gear_start(self):
         self.on_start()
@@ -997,10 +995,10 @@ class SystemGear(InjectorGearSkeleton):
             gear_admin_queue='ariane.community.plugin.procos.gears.cache.system_gear@'+SystemGear.hostname,
             running=False
         )
-        self.component = SystemComponent.start(attached_gear_id=self.gear_id(), hostname=SystemGear.hostname).proxy()
         self.sleeping_period = config.sleeping_period
         self.service = None
         self.service_name = 'system_procos@'+SystemGear.hostname+' gear'
+        self.component = SystemComponent.start(attached_gear_id=self.gear_id(), hostname=SystemGear.hostname).proxy()
         self.directory_gear = DirectoryGear.start().proxy()
         self.mapping_gear = MappingGear.start().proxy()
 
@@ -1027,15 +1025,18 @@ class SystemGear(InjectorGearSkeleton):
         self.service.start()
 
     def on_stop(self):
-        if self.running:
-            self.running = False
-            self.cache(running=self.running)
-        self.service = None
-        self.component.service.get().stop()
-        self.directory_gear.stop()
-        self.mapping_gear.stop()
-        self.cached_gear_actor.remove().get()
-        self.cached_gear_actor.stop()
+        try:
+            if self.running:
+                self.running = False
+                self.cache(running=self.running)
+            self.service = None
+            self.component.stop().get()
+            self.directory_gear.stop().get()
+            self.mapping_gear.stop().get()
+            self.cached_gear_actor.remove().get()
+        except Exception as e:
+            LOGGER.error(e.__str__())
+            LOGGER.error(traceback.format_exc())
 
     def gear_start(self):
         if self.service is not None:

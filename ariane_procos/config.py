@@ -144,6 +144,7 @@ class Config(object):
         self.rbmq_vhost = None
 
         self.sleeping_period = None
+        self.log_conf_file_path = None
 
         #List of possible datacenters this OS instance could be located with routing area and subnets
         #(labtop of VM which can move through an hypervisor)
@@ -208,6 +209,8 @@ class Config(object):
                 except ValueError:
                     raise exceptions.ArianeProcOSConfigMandatoryFieldsValueError('sleeping_period',
                                                                                  'should be an integer !')
+            if 'log_conf_file_path' in config['ariane_procos']:
+                self.log_conf_file_path = config['ariane_procos']['log_conf_file_path']
 
             if ariane_procos_missing_fields.__len__() == 0:
                 if config['ariane_procos']['potential_datacenters'] is not None:
