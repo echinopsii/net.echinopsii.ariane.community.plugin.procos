@@ -698,6 +698,13 @@ class MappingGear(InjectorGearSkeleton):
                 print('DEBUG: ' + str(proc.new_map_sockets.__len__()) + ' new socket found for process ' + name)
                 for map_socket in proc.new_map_sockets:
                     if map_socket.source_ip is not None and map_socket.source_port is not None:
+
+                        if map_socket.source_port == SystemGear.config.system_context.admin_gate_port and \
+                            map_socket.status == "LISTEN":
+                            print("DEBUG: gate process found (" + name + ")")
+                            #ADMIN GATE HAS ALREADY BEEN CREATED
+                            continue
+
                         proto = None
                         if map_socket.type == "SOCK_STREAM":
                             proto = "tcp://"

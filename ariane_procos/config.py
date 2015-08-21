@@ -74,9 +74,10 @@ class SystemTypeConfig(object):
 
 
 class SystemContextConfig(object):
-    def __init__(self, description=None, admin_gate_protocol=None, embedding_osi_hostname=None, os_type=None):
+    def __init__(self, description=None, admin_gate_protocol=None, admin_gate_port=None, embedding_osi_hostname=None, os_type=None):
         self.description = description
         self.admin_gate_protocol = admin_gate_protocol
+        self.admin_gate_port = admin_gate_port
         self.embedding_osi_hostname = embedding_osi_hostname
         self.os_type = os_type
 
@@ -251,7 +252,8 @@ class Config(object):
                     )
                     self.system_context = SystemContextConfig(
                         description=config['ariane_procos']['system_context']['description'],
-                        admin_gate_protocol=config['ariane_procos']['system_context']['admin_gate_proto'],
+                        admin_gate_protocol=config['ariane_procos']['system_context']['admin_gate']['protocol'],
+                        admin_gate_port=config['ariane_procos']['system_context']['admin_gate']['port'],
                         embedding_osi_hostname=config['ariane_procos']['system_context']['embedding_osi_hostname'],
                         os_type=ost
                     )

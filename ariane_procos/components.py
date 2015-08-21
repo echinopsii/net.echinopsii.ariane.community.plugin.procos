@@ -47,7 +47,7 @@ class SystemComponent(InjectorComponentSkeleton):
         self.version = 0
 
     def data_blob(self):
-        return self.operating_system.operating_system_2_json()
+        return json.dumps(self.operating_system.operating_system_2_json())
 
     def sniff(self):
         try:

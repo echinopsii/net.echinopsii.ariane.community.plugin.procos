@@ -405,7 +405,7 @@ class OperatingSystem(object):
             'environment_id': self.environment_id,
             'team_id': self.team_id
         }
-        return json.dumps(json_obj)
+        return json_obj
 
     @staticmethod
     def json_2_operating_system(json_obj):
@@ -582,7 +582,7 @@ class OperatingSystem(object):
 
                 self.processs.append(proc)
             except psutil.AccessDenied:
-                pass
+                print("INFO: access denied for process " + str(pid))
 
         for process in self.last_processs:
             if process not in self.processs:
