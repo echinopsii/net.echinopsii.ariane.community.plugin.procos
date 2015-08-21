@@ -32,12 +32,9 @@ class GearsSkeletonTest(unittest.TestCase):
         }
         self.ariane_connector = ArianeConnector(self.config)
 
-    def tearDown(self):
-        self.ariane_connector.stop()
-
     def test_gear_skeleton(self):
         system_gear = SystemGear.start(config=self.config).proxy()
-        time.sleep(60)
+        time.sleep(100)
 
         directory_update_count = system_gear.directory_gear.get().update_count.get()
         self.assertTrue(directory_update_count >= 1)
@@ -50,7 +47,11 @@ class GearsSkeletonTest(unittest.TestCase):
 
         system_gear.stop()
         system_gear = SystemGear.start(config=self.config).proxy()
+        time.sleep(100)
 
         current_blob = system_gear.component.get().component_cache_actor.get().blob.get()
         self.assertTrue(current_blob is not None)
         system_gear.stop()
+
+    def tearDown(self):
+        self.ariane_connector.stop()

@@ -93,7 +93,10 @@
         ],
         "system_context": {
             "description": "Personal mcbook pro",
-            "admin_gate_proto": "ssh://",
+            "admin_gate": {
+                "protocol": "ssh://",
+                "port": 22
+            },
             "embedding_osi_hostname": "",
             "type": {
                 "name": "OS X Yosemite 10.10",

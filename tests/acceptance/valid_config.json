@@ -49,14 +49,14 @@
                 "gps_lng": 2.246610,
                 "routing_areas": [
                     {
-                        "name": "Free@Mez",
+                        "name": "Numericable@Mez",
                         "multicast": "NOLIMIT",
                         "type": "LAN",
-                        "description": "Free routing area",
+                        "description": "Numericable routing area",
                         "subnets": [
                             {
-                                "name": "Free",
-                                "description": "Main Free subnet",
+                                "name": "Numericable",
+                                "description": "Main Numericable subnet",
                                 "subnet_ip": "192.168.1.0",
                                 "subnet_mask": "255.255.255.0"
                             }
@@ -139,7 +139,10 @@
         ],
         "system_context": {
             "description": "Personal mcbook pro",
-            "admin_gate_proto": "ssh://",
+            "admin_gate": {
+                "protocol": "ssh://",
+                "port": 22
+            },
             "embedding_osi_hostname": "",
             "type": {
                 "name": "OS X Yosemite 10.10",
