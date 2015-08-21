@@ -15,18 +15,23 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 import socket
+import traceback
 from ariane_clip3.injector import InjectorService, InjectorUITreeEntity, InjectorUITreeService, \
     InjectorCachedComponentService, InjectorCachedGearService
-from ariane_clip3.mapping import MappingService
-from ariane_clip3.directory import DirectoryService
+from ariane_clip3.mapping import MappingService, ContainerService
+from ariane_clip3.directory import DirectoryService, DatacenterService
 
 __author__ = 'mffrench'
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ArianeConnector(object):
 
     def __init__(self, procos_config):
+        self.ready = False
         rest_args = {
             'type': 'REST',
             'base_url': procos_config.rest_base_url,
@@ -66,44 +71,70 @@ class ArianeConnector(object):
             'cache.mgr.name': 'ARIANE_PLUGIN_PROCOS_COMPONENTS_CACHE_MGR'
         }
 
+        no_error = True
         DirectoryService(rest_args)
-        MappingService(rest_args)
-        self.injector_service = InjectorService(
-            driver_args=rbmq_args, gears_registry_args=procos_gears_registry_conf,
-            components_registry_args=procos_components_registry_conf
-        )
+        # Test Directory Service
+        try:
+            DatacenterService.get_datacenters()
+        except Exception as e:
+            LOGGER.error("Problem while initializing Ariane directory service.")
+            LOGGER.error(e.__str__())
+            no_error = False
 
-        # Register UI entity if needed
-        self.injector_ui_mapping_entity = InjectorUITreeService.find_ui_tree_entity('mappingDir')
-        if self.injector_ui_mapping_entity is None:
-            self.injector_ui_mapping_entity = InjectorUITreeEntity(uitid="mappingDir", value="Mapping",
-                                                                   uitype=InjectorUITreeEntity.entity_dir_type)
-            self.injector_ui_mapping_entity.save()
-        self.injector_ui_system_entity = InjectorUITreeEntity(uitid="systemDir", value="System",
-                                                              uitype=InjectorUITreeEntity.entity_dir_type,
-                                                              context_address="", description="",
-                                                              parent_id=self.injector_ui_mapping_entity.id,
-                                                              display_roles=["sysadmin"],
-                                                              display_permissions=["injMapSysOS:display"])
-        self.injector_ui_system_entity.save()
-        self.injector_ui_procos_entity = InjectorUITreeEntity(uitid="procos", value="ProcOS",
-                                                              uitype=InjectorUITreeEntity.entity_leaf_type,
-                                                              context_address=
-                                                              "/ariane/views/injectors/external.jsf?id=procos",
-                                                              description="ProcOS injector", icon="icon-cog",
-                                                              parent_id=self.injector_ui_system_entity.id,
-                                                              display_roles=["sysadmin", "sysreviewer"],
-                                                              display_permissions=["injMapSysOS:display"],
-                                                              remote_injector_tree_entity_gears_cache_id=
-                                                              self.gears_registry_cache_id,
-                                                              remote_injector_tree_entity_components_cache_id=
-                                                              self.components_registry_cache_id)
-        self.injector_ui_procos_entity.save()
-        self.ready = True
+        if no_error:
+            MappingService(rest_args)
+            # Test Mapping Service
+            try:
+                ContainerService.get_containers()
+            except Exception as e:
+                LOGGER.error("Problem while initializing Ariane mapping service.")
+                LOGGER.error(e.__str__())
+                no_error = False
+
+        if no_error:
+            try:
+                self.injector_service = InjectorService(
+                    driver_args=rbmq_args, gears_registry_args=procos_gears_registry_conf,
+                    components_registry_args=procos_components_registry_conf
+                )
+            except Exception as e:
+                LOGGER.error("Problem while initializing Ariane injector service.")
+                LOGGER.error(e.__str__())
+                no_error = False
+
+        if no_error:
+            # Register UI entity if needed (and so test)
+            self.injector_ui_mapping_entity = InjectorUITreeService.find_ui_tree_entity('mappingDir')
+            if self.injector_ui_mapping_entity is None:
+                self.injector_ui_mapping_entity = InjectorUITreeEntity(uitid="mappingDir", value="Mapping",
+                                                                       uitype=InjectorUITreeEntity.entity_dir_type)
+                self.injector_ui_mapping_entity.save()
+            self.injector_ui_system_entity = InjectorUITreeEntity(uitid="systemDir", value="System",
+                                                                  uitype=InjectorUITreeEntity.entity_dir_type,
+                                                                  context_address="", description="",
+                                                                  parent_id=self.injector_ui_mapping_entity.id,
+                                                                  display_roles=["sysadmin"],
+                                                                  display_permissions=["injMapSysOS:display"])
+            self.injector_ui_system_entity.save()
+            self.injector_ui_procos_entity = InjectorUITreeEntity(uitid="procos", value="ProcOS",
+                                                                  uitype=InjectorUITreeEntity.entity_leaf_type,
+                                                                  context_address=
+                                                                  "/ariane/views/injectors/external.jsf?id=procos",
+                                                                  description="ProcOS injector", icon="icon-cog",
+                                                                  parent_id=self.injector_ui_system_entity.id,
+                                                                  display_roles=["sysadmin", "sysreviewer"],
+                                                                  display_permissions=["injMapSysOS:display"],
+                                                                  remote_injector_tree_entity_gears_cache_id=
+                                                                  self.gears_registry_cache_id,
+                                                                  remote_injector_tree_entity_components_cache_id=
+                                                                  self.components_registry_cache_id)
+            self.injector_ui_procos_entity.save()
+            self.ready = True
 
     def stop(self):
-        if InjectorCachedGearService.get_gears_cache_size() == 0 and \
-                InjectorCachedComponentService.get_components_cache_size() == 0:
-            self.injector_ui_procos_entity.remove()
-        self.injector_service.stop()
-        self.ready = False
+        if self.ready:
+            if InjectorCachedGearService.get_gears_cache_size() == 0 and \
+                    InjectorCachedComponentService.get_components_cache_size() == 0:
+                self.injector_ui_procos_entity.remove()
+            self.injector_service.stop()
+            self.ready = False
