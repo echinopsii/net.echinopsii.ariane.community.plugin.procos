@@ -10,7 +10,7 @@
         "rbmq_vhost": "/ariane"
     },
     "ariane_procos": {
-        "sleeping_period": 60,
+        "sleeping_period": "tezt",
         "log_conf_file_path": "/some/log/file/path",
         "potential_datacenters": [
             {
