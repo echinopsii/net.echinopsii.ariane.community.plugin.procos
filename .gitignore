@@ -1,3 +1,6 @@
 ariane_procos/__pycache__/
+ariane_procos/errors.log
+ariane_procos/info.log
+misc/my_config.json
 tests/acceptance/__pycache__/
 tests/unit/__pycache__/
