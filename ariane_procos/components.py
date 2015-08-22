@@ -29,12 +29,14 @@ LOGGER = logging.getLogger(__name__)
 
 
 class SystemComponent(InjectorComponentSkeleton):
-    def __init__(self, attached_gear_id=None, hostname=socket.gethostname()):
+    def __init__(self, attached_gear_id=None, hostname=socket.gethostname(),
+                 component_type=None):
         self.hostname = hostname
         super(SystemComponent, self).__init__(
             component_id=
             'ariane.community.plugin.procos.components.cache.system_component@' + self.hostname,
             component_name='procos_system_component@' + self.hostname,
+            component_type=component_type if component_type is not None else "ProcOS injector",
             component_admin_queue=
             'ariane.community.plugin.procos.components.cache.system_component@' + self.hostname,
             refreshing=False, next_action=InjectorCachedComponent.action_create,

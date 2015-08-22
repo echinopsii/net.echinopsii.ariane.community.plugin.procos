@@ -41,7 +41,7 @@ def shutdown_handle(signum, frame):
     if ariane_connector is not None:
         time.sleep(5)
         ariane_connector.stop()
-    LOGGER.info("Ariane ProcOS@" + socket.gethostname() + " has been shutdown...")
+    LOGGER.info("Ariane ProcOS@" + socket.gethostname() + " is stopped...")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--configuration",
@@ -77,5 +77,5 @@ if ariane_procos_config is not None:
         signal.signal(signal.SIGINT, shutdown_handle)
         signal.signal(signal.SIGTERM, shutdown_handle)
         system_gear = SystemGear.start(config=ariane_procos_config).proxy()
-        LOGGER.info("Ariane ProcOS@" + socket.gethostname() + " has been started...")
+        LOGGER.info("Ariane ProcOS@" + socket.gethostname() + " is started...")
         signal.pause()

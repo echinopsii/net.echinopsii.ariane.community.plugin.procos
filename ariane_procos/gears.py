@@ -998,7 +998,12 @@ class SystemGear(InjectorGearSkeleton):
         self.sleeping_period = config.sleeping_period
         self.service = None
         self.service_name = 'system_procos@'+SystemGear.hostname+' gear'
-        self.component = SystemComponent.start(attached_gear_id=self.gear_id(), hostname=SystemGear.hostname).proxy()
+        component_type = SystemGear.config.system_context.os_type.name + "-" + SystemGear.config.system_context.os_type.architecture
+        self.component = SystemComponent.start(
+            attached_gear_id=self.gear_id(),
+            hostname=SystemGear.hostname,
+            component_type=component_type
+        ).proxy()
         self.directory_gear = DirectoryGear.start().proxy()
         self.mapping_gear = MappingGear.start().proxy()
 
