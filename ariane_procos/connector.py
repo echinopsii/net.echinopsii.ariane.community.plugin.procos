@@ -43,7 +43,7 @@ class ArianeConnector(object):
             'information': 'Ariane Plugin ProcOS - Map your Operating System Process interaction and more ...',
             'ariane.pgurl': 'ssh://' + socket.gethostname(),
             'ariane.osi': socket.gethostname(),
-            'ariane.otm': 'ArianeOPS',
+            'ariane.otm': 'AROps',
             'ariane.app': 'Ariane',
             'ariane.cmp': 'echinopsii'
         }
@@ -113,8 +113,8 @@ class ArianeConnector(object):
                                                                   uitype=InjectorUITreeEntity.entity_dir_type,
                                                                   context_address="", description="",
                                                                   parent_id=self.injector_ui_mapping_entity.id,
-                                                                  display_roles=["sysadmin"],
-                                                                  display_permissions=["injMapSysOS:display"])
+                                                                  display_roles=["sysreviewer"],
+                                                                  display_permissions=["injMapProcOS:display"])
             self.injector_ui_system_entity.save()
             self.injector_ui_procos_entity = InjectorUITreeEntity(uitid="procos", value="ProcOS",
                                                                   uitype=InjectorUITreeEntity.entity_leaf_type,
@@ -123,7 +123,9 @@ class ArianeConnector(object):
                                                                   description="ProcOS injector", icon="icon-cog",
                                                                   parent_id=self.injector_ui_system_entity.id,
                                                                   display_roles=["sysadmin", "sysreviewer"],
-                                                                  display_permissions=["injMapSysOS:display"],
+                                                                  display_permissions=["injMapProcOS:display"],
+                                                                  other_actions_roles={"action": ["sysadmin"]},
+                                                                  other_actions_perms={"action": ["injMapProcOS:action"]},
                                                                   remote_injector_tree_entity_gears_cache_id=
                                                                   self.gears_registry_cache_id,
                                                                   remote_injector_tree_entity_components_cache_id=

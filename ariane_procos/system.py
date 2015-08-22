@@ -576,6 +576,8 @@ class OperatingSystem(object):
                     self.new_processs.append(proc)
 
                 self.processs.append(proc)
+            except psutil.NoSuchProcess:
+                LOGGER.debug("process " + str(pid) + " doesnt exist anymore")
             except psutil.AccessDenied:
                 LOGGER.debug("access denied for process " + str(pid))
 

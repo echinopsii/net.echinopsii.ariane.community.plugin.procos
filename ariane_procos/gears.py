@@ -61,10 +61,12 @@ class DirectoryGear(InjectorGearSkeleton):
         self.cached_gear_actor.remove().get()
 
     def gear_start(self):
+        LOGGER.warn('procos_directory_gear@'+SystemGear.hostname+' has been started.')
         self.on_start()
 
     def gear_stop(self):
         if self.running:
+            LOGGER.warn('procos_directory_gear@'+SystemGear.hostname+' has been stopped.')
             self.running = False
             self.cache(running=self.running)
 
@@ -442,6 +444,7 @@ class DirectoryGear(InjectorGearSkeleton):
                     if subnet.id not in SystemGear.osi.subnet_ids:
                         SystemGear.osi.add_subnet(subnet)
 
+        SystemGear.osi.sync()
         for ipv4_id in SystemGear.osi.ip_address_ids:
             ipv4 = IPAddressService.find_ip_address(ipa_id=ipv4_id)
             to_be_removed = True
@@ -537,9 +540,12 @@ class DirectoryGear(InjectorGearSkeleton):
             LOGGER.warn('DIRECTORIES SYNC ARE IGNORED')
 
     def synchronize_with_ariane_directories(self, component):
-        operating_system = component.operating_system.get()
-        self.update_ariane_directories(operating_system)
-        self.update_count += 1
+        if self.running:
+            operating_system = component.operating_system.get()
+            self.update_ariane_directories(operating_system)
+            self.update_count += 1
+        else:
+            LOGGER.warn("Synchronization requested but procos_directory_gear@"+SystemGear.hostname+" is not running.")
 
 
 class MappingGear(InjectorGearSkeleton):
@@ -565,10 +571,12 @@ class MappingGear(InjectorGearSkeleton):
         self.cached_gear_actor.remove().get()
 
     def gear_start(self):
+        LOGGER.warn('procos_mapping_gear@'+SystemGear.hostname+' has been started.')
         self.on_start()
 
     def gear_stop(self):
         if self.running:
+            LOGGER.warn('procos_mapping_gear@'+SystemGear.hostname+' has been stopped.')
             self.running = False
             self.cache(running=self.running)
 
@@ -959,15 +967,18 @@ class MappingGear(InjectorGearSkeleton):
         LOGGER.debug('time : {0}'.format(sync_proc_time))
 
     def synchronize_with_ariane_mapping(self, component):
-        operating_system = component.operating_system.get()
-        try:
-            self.sync_container(operating_system)
-            self.sync_processs(operating_system)
-            self.sync_map_socket(operating_system)
-        except Exception as e:
-            LOGGER.error(e.__str__())
-            LOGGER.error(traceback.format_exc())
-        self.update_count += 1
+        if self.running:
+            operating_system = component.operating_system.get()
+            try:
+                self.sync_container(operating_system)
+                self.sync_processs(operating_system)
+                self.sync_map_socket(operating_system)
+            except Exception as e:
+                LOGGER.error(e.__str__())
+                LOGGER.error(traceback.format_exc())
+            self.update_count += 1
+        else:
+            LOGGER.warn('Synchronization requested but procos_mapping_gear@'+SystemGear.hostname+' is not running.')
 
 
 class SystemGear(InjectorGearSkeleton):
@@ -998,14 +1009,20 @@ class SystemGear(InjectorGearSkeleton):
         self.sleeping_period = config.sleeping_period
         self.service = None
         self.service_name = 'system_procos@'+SystemGear.hostname+' gear'
-        component_type = SystemGear.config.system_context.os_type.name + "-" + SystemGear.config.system_context.os_type.architecture
+        component_type = SystemGear.config.system_context.os_type.name + " - " + SystemGear.config.system_context.os_type.architecture
         self.component = SystemComponent.start(
             attached_gear_id=self.gear_id(),
             hostname=SystemGear.hostname,
-            component_type=component_type
+            component_type=component_type,
+            system_gear_actor_ref=self.actor_ref
         ).proxy()
         self.directory_gear = DirectoryGear.start().proxy()
         self.mapping_gear = MappingGear.start().proxy()
+
+    def synchronize_with_ariane_dbs(self):
+        LOGGER.info("Synchonize with Ariane DBs...")
+        self.directory_gear.synchronize_with_ariane_directories(self.component)
+        self.mapping_gear.synchronize_with_ariane_mapping(self.component)
 
     def run(self):
         if self.sleeping_period is not None and self.sleeping_period > 0:
@@ -1013,19 +1030,18 @@ class SystemGear(InjectorGearSkeleton):
                 time.sleep(self.sleeping_period)
                 if self.running:
                     self.component.sniff().get()
-                if self.running:
-                    self.directory_gear.synchronize_with_ariane_directories(self.component)
-                if self.running:
-                    self.mapping_gear.synchronize_with_ariane_mapping(self.component)
 
     def on_start(self):
-        self.running = True
         self.cache(running=self.running)
+        LOGGER.warn("Initializing...")
         self.directory_gear.init_ariane_directories(self.component).get()
-        self.component.sniff().get()
+        self.component.sniff(synchronize_with_ariane_dbs=False).get()
+        LOGGER.info("Synchonize with Ariane DBs...")
         self.directory_gear.synchronize_with_ariane_directories(self.component).get()
         self.mapping_gear.synchronize_with_ariane_mapping(self.component).get()
-        LOGGER.debug("INIT DONE. STARTING SYSTEM GEAR LOOP...")
+        LOGGER.warn("Initialization done.")
+        self.running = True
+        self.cache(running=self.running)
         self.service = threading.Thread(target=self.run, name=self.service_name)
         self.service.start()
 
@@ -1045,13 +1061,17 @@ class SystemGear(InjectorGearSkeleton):
 
     def gear_start(self):
         if self.service is not None:
+            LOGGER.warn('procos_system_gear@'+SystemGear.hostname+' has been started')
             self.running = True
+            self.service = threading.Thread(target=self.run, name=self.service_name)
             self.service.start()
             self.cache(running=self.running)
         else:
+            LOGGER.warn('procos_system_gear@'+SystemGear.hostname+' has been restarted')
             self.on_start()
 
     def gear_stop(self):
         if self.running:
+            LOGGER.warn('procos_system_gear@'+SystemGear.hostname+' has been stopped')
             self.running = False
             self.cache(running=self.running)
