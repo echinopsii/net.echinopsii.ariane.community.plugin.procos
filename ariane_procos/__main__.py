@@ -23,7 +23,7 @@ import socket
 import sys
 import signal
 import time
-from config import Config
+from ariane_procos.config import Config
 
 
 __author__ = 'mffrench'

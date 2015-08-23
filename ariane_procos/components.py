@@ -21,7 +21,7 @@ import logging
 import socket
 import traceback
 from ariane_clip3.injector import InjectorComponentSkeleton, InjectorCachedComponent
-from system import OperatingSystem
+from ariane_procos.system import OperatingSystem
 
 __author__ = 'mffrench'
 

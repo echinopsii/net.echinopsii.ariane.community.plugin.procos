@@ -28,9 +28,9 @@ from ariane_clip3.directory import DatacenterService, Datacenter, RoutingAreaSer
     OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team,\
     OSTypeService, OSType, Company, CompanyService
 from ariane_clip3.injector import InjectorGearSkeleton
-from components import SystemComponent
-from config import RoutingAreaConfig, SubnetConfig
-from system import NetworkInterfaceCard, MapSocket
+from ariane_procos.components import SystemComponent
+from ariane_procos.config import RoutingAreaConfig, SubnetConfig
+from ariane_procos.system import NetworkInterfaceCard, MapSocket
 
 __author__ = 'mffrench'
 
