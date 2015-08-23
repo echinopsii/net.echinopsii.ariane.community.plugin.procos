@@ -4,3 +4,5 @@ ariane_procos/info.log
 misc/my_config.json
 tests/acceptance/__pycache__/
 tests/unit/__pycache__/
+ariane_procos.egg-info/
+dist/
