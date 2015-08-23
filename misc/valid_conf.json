@@ -1,16 +1,17 @@
 {
     "ariane_server": {
-        "rest_base_url": "http://localhost:6969/ariane/",
+        "rest_base_url": "http://env-mffrench.lab01.dev:6969/ariane/",
         "rest_user": "yoda",
         "rest_password": "secret",
-        "rbmq_host": "localhost",
+        "rbmq_host": "rbmq-pool02.lab02.dev",
         "rbmq_port": 5672,
         "rbmq_user": "ariane",
         "rbmq_password": "password",
         "rbmq_vhost": "/ariane"
     },
     "ariane_procos": {
-        "sleeping_period": "",
+        "sleeping_period": 20,
+        "log_conf_file_path": "/CC/DEV/ariane.master/ariane.community.plugin.procos/misc/logging.json",
         "potential_datacenters": [
             {
                 "name": "CPE-lyon",
@@ -49,15 +50,29 @@
                 "gps_lng": 2.246610,
                 "routing_areas": [
                     {
-                        "name": "Free",
+                        "name": "Numericable@Mez",
                         "multicast": "NOLIMIT",
                         "type": "LAN",
-                        "description": "Free routing area",
+                        "description": "Numericable routing area",
                         "subnets": [
                             {
-                                "name": "Free Lan",
-                                "description": "Free Lan subnet",
-                                "subnet_ip": "192.169.1.0",
+                                "name": "Numericable",
+                                "description": "Main Numericable subnet",
+                                "subnet_ip": "192.168.1.0",
+                                "subnet_mask": "255.255.255.0"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "DekatonshivrVPN@Mez",
+                        "multicast": "FILTERED",
+                        "type": "VPN",
+                        "description": "Dekatonshivr VPN routing area",
+                        "subnets": [
+                            {
+                                "name": "Dekatonshivr VPN",
+                                "description": "Dekatonshivr VPN access subnet",
+                                "subnet_ip": "10.8.0.0",
                                 "subnet_mask": "255.255.255.0"
                             }
                         ]
@@ -81,10 +96,42 @@
                         "description": "WAI routing area",
                         "subnets": [
                             {
-                                "name": "WAI wifi",
-                                "description": "WAI wifi subnet",
+                                "name": "WAI wired",
+                                "description": "WAI wired subnet",
                                 "subnet_ip": "192.168.7.0",
                                 "subnet_mask": "255.255.255.0"
+                            },
+                            {
+                                "name": "WAI wifi",
+                                "description": "WAI wifi subnet",
+                                "subnet_ip": "192.168.100.0",
+                                "subnet_mask": "255.255.255.0"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Carglass Courbevoie",
+                "description": "Carglass Courbevoie",
+                "address": "107 Boulevard Mission Marchand",
+                "zipcode": 92400,
+                "town": "Courbevoie",
+                "country": "France",
+                "gps_lat": 48.901740,
+                "gps_lng": 2.239230,
+                "routing_areas": [
+                    {
+                        "name": "Carglass Courbevoie Network",
+                        "multicast": "FILTERED",
+                        "type": "LAN",
+                        "description": "Carglass Courbevoie routing area",
+                        "subnets": [
+                            {
+                                "name": "Carglass Client",
+                                "description": "WIFI Carglass Client ",
+                                "subnet_ip": "10.208.180.0",
+                                "subnet_mask": "255.255.254.0"
                             }
                         ]
                     }
@@ -93,7 +140,10 @@
         ],
         "system_context": {
             "description": "Personal mcbook pro",
-            "admin_gate_proto": "ssh://",
+            "admin_gate": {
+                "protocol": "ssh://",
+                "port": 22
+            },
             "embedding_osi_hostname": "",
             "type": {
                 "name": "OS X Yosemite 10.10",
@@ -117,3 +167,4 @@
         }
     }
 }
+

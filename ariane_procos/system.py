@@ -17,12 +17,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import copy
 import json
+import logging
 import os
 import socket
 import struct
 import psutil
 
 __author__ = 'mffrench'
+
+LOGGER = logging.getLogger(__name__)
 
 
 class MapSocket(object):
@@ -75,7 +78,7 @@ class MapSocket(object):
         elif ipv6 == "::":
             ipv4 = "0.0.0.0"
         else:
-            print("WARN - IPv6 ADDR not supported " + ipv6)
+            LOGGER.warn("IPv6 ADDR not supported " + ipv6)
         return ipv4
 
     def transform_system_ipv6_to_ipv4(self):
@@ -93,26 +96,18 @@ class MapSocket(object):
         if self.family == "AF_INET":
             for nic in operating_system.nics:
                 if nic.ipv4_address is not None and \
-                                self.destination_ip == nic.ipv4_address:
+                        self.destination_ip == nic.ipv4_address:
                     destination_is_local = True
-                    #print("DEBUG: local destination endpoint " +
-                    #      (target_fqdn if target_fqdn is not None else map_socket.destination_ip)+
-                    #      "/" +
-                    #      target_url)
                     break
         elif self.family == "AF_INET6":
             if self.destination_ip.startswith("::127") or \
-                            self.destination_ip == "::1":
+                    self.destination_ip == "::1":
                 destination_is_local = True
             else:
                 for nic in operating_system.nics:
                     if nic.ipv6_address is not None and \
-                                    self.destination_ip == nic.ipv6_address:
+                            self.destination_ip == nic.ipv6_address:
                         destination_is_local = True
-                        #print("DEBUG: local destination endpoint " +
-                        #      (target_fqdn if target_fqdn is not None else map_socket.destination_ip)+
-                        #      "/" +
-                        #      target_url)
                         break
         elif self.family == "AF_UNIX":
             destination_is_local = True
@@ -405,7 +400,7 @@ class OperatingSystem(object):
             'environment_id': self.environment_id,
             'team_id': self.team_id
         }
-        return json.dumps(json_obj)
+        return json_obj
 
     @staticmethod
     def json_2_operating_system(json_obj):
@@ -491,7 +486,7 @@ class OperatingSystem(object):
 
                 try:
                     proc_connections = psutil_proc.connections()
-                except ProcessLookupError as e:
+                except ProcessLookupError:
                     proc_connections = []
 
                 proc.map_sockets = []
@@ -516,7 +511,7 @@ class OperatingSystem(object):
                     if map_socket not in proc.map_sockets:
                         proc.map_sockets.append(map_socket)
                     map_socket.file_descriptors.append(psutil_connection.fd)
-                    #print("DEBUG " + str(psutil_connection))
+                    LOGGER.debug(str(psutil_connection))
 
                 if proc in self.last_processs:
                     for last_proc in self.last_processs:
@@ -527,7 +522,7 @@ class OperatingSystem(object):
                             else:
                                 exe_tab = proc.exe.split(os.path.sep)
                                 name = '[' + str(proc.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
-                                #print('DEBUG: process not saved on DB correctly ' + name)
+                                LOGGER.debug('process not saved on DB correctly ' + name)
                                 self.new_processs.append(proc)
 
                             proc.last_map_sockets = copy.deepcopy(last_proc.map_sockets)
@@ -581,8 +576,10 @@ class OperatingSystem(object):
                     self.new_processs.append(proc)
 
                 self.processs.append(proc)
+            except psutil.NoSuchProcess:
+                LOGGER.debug("process " + str(pid) + " doesnt exist anymore")
             except psutil.AccessDenied:
-                pass
+                LOGGER.debug("access denied for process " + str(pid))
 
         for process in self.last_processs:
             if process not in self.processs:
