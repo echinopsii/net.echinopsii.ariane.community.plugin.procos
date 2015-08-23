@@ -68,8 +68,8 @@ except Exception as e:
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 
-from connector import ArianeConnector
-from gears import SystemGear
+from ariane_procos.connector import ArianeConnector
+from ariane_procos.gears import SystemGear
 
 if ariane_procos_config is not None:
     ariane_connector = ArianeConnector(ariane_procos_config)
