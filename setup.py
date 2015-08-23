@@ -13,7 +13,7 @@ long_description = ('Ariane Plugin PROCOS map your operating process interaction
 
 setup(name='ariane_procos',
       version='0.1.0-b01',
-      description='Ariane Plugin PROCOS',
+      description='Ariane Plugin ProcOS',
       long_description=long_description,
       author='Mathilde Ffrench',
       author_email='mathilde.ffrench@echinopsii.net',
@@ -23,7 +23,7 @@ setup(name='ariane_procos',
       download_url='https://github.com/echinopsii/net.echinopsii.ariane.community.plugin.procos.git/tarball/0.1.0-b01',
       packages=['ariane_procos'],
       license='AGPLv3',
-      install_requires=['psutil','pykka', 'ariane_clip3'],
+      install_requires=['psutil','pykka','ariane_clip3'],
       package_data={'': ['LICENSE', 'README.md']},
       classifiers=[
           'Development Status :: 4 - Beta',
