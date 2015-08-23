@@ -77,8 +77,6 @@ class MapSocket(object):
             ipv4 = "127.0.0.1"
         elif ipv6 == "::":
             ipv4 = "0.0.0.0"
-        else:
-            LOGGER.warn("IPv6 ADDR not supported " + ipv6)
         return ipv4
 
     def transform_system_ipv6_to_ipv4(self):
