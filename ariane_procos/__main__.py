@@ -29,7 +29,7 @@ from ariane_procos.config import Config
 __author__ = 'mffrench'
 
 ariane_connector = None
-config_path = "/etc/ariane/procos.json"
+config_path = "/etc/ariane/aprocos_configuration.json"
 ariane_procos_config = None
 system_gear = None
 

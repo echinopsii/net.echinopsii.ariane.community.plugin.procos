@@ -33,4 +33,4 @@ if [ ! -d /var/log/ariane ]; then
     mkdir /var/log/ariane
 fi
 
-curl -L 
+curl -L
