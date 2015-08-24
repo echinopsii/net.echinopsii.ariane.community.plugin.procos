@@ -11,7 +11,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-`which curl`
+which curl > /dev/null
 if [ $? -ne 0 ]; then
     echo "$0 needs curl... Exit."
     exit 1
