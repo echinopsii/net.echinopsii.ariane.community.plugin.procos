@@ -11,7 +11,7 @@
     },
     "ariane_procos": {
         "sleeping_period": 20,
-        "log_conf_file_path": "/CC/DEV/ariane.master/ariane.community.plugin.procos/misc/logging.json",
+        "log_conf_file_path": "/CC/DEV/ariane.master/ariane.community.plugin.procos/misc/aprocos_logging.json",
         "potential_datacenters": [
             {
                 "name": "CPE-lyon",
