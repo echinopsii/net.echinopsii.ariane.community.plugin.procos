@@ -1,9 +1,9 @@
 {
     "ariane_server": {
-        "rest_base_url": "http://env-mffrench.lab01.dev:6969/ariane/",
+        "rest_base_url": "http://localhost:6969/ariane/",
         "rest_user": "yoda",
         "rest_password": "secret",
-        "rbmq_host": "rbmq-pool02.lab02.dev",
+        "rbmq_host": "localhost",
         "rbmq_port": 5672,
         "rbmq_user": "ariane",
         "rbmq_password": "password",
