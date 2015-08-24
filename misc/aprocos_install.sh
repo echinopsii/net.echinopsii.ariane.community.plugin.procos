@@ -35,9 +35,9 @@ fi
 
 curl -L https://raw.githubusercontent.com/echinopsii/net.echinopsii.ariane.community.plugin.procos/master/misc/aprocos_configuration.json > /etc/ariane/aprocos_configuration.json
 curl -L https://raw.githubusercontent.com/echinopsii/net.echinopsii.ariane.community.plugin.procos/master/misc/aprocos_logging.json > /etc/ariane/aprocos_logging.json
-curl -L https://raw.githubusercontent.com/echinopsii/net.echinopsii.ariane.community.plugin.procos/master/misc/aprocos.sh > /etc/init.d/aprocos.sh
+curl -L https://raw.githubusercontent.com/echinopsii/net.echinopsii.ariane.community.plugin.procos/master/misc/aprocos.sh > /usr/local/bin/aprocos
 
 echo ""
 echo "Ariane ProcOS successfully installed on this operating system..."
 echo "Take time to define Ariane server connections and describe this operating system context by editing /etc/ariane/aprocos_configuration.json..."
-echo "Then you can start mapping your Operating System components by starting Ariane ProcOS this way : /etc/init.d/aprocos.sh start"
+echo "Then you can start mapping your Operating System components by starting Ariane ProcOS this way : /usr/local/bin/aprocos start"
