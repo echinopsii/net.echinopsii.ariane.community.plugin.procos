@@ -217,7 +217,8 @@ class DirectoryGear(InjectorGearSkeleton):
                 if SystemGear.environment is None:
                     SystemGear.environment = Environment(
                         name=SystemGear.config.organisation_context.environment.name,
-                        description=SystemGear.config.organisation_context.environment.description
+                        description=SystemGear.config.organisation_context.environment.description,
+                        color_code=SystemGear.config.organisation_context.environment.color_code
                     )
                     SystemGear.environment.save()
                 operating_system.environment_id = SystemGear.environment.id

@@ -24,9 +24,10 @@ __author__ = 'mffrench'
 
 
 class EnvironmentConfig(object):
-    def __init__(self, name=None, description = None):
+    def __init__(self, name=None, color_code=None, description = None):
         self.name = name
-        self.description = description = description
+        self.description = description
+        self.color_code = color_code
 
     def __eq__(self, other):
         if self.name != other.name:
@@ -273,6 +274,7 @@ class Config(object):
                     if config['ariane_procos']['organization_context']['environment'] is not None:
                         environment = EnvironmentConfig(
                             name=config['ariane_procos']['organization_context']['environment']['name'],
+                            color_code=config['ariane_procos']['organization_context']['environment']['color_code'],
                             description=config['ariane_procos']['organization_context']['environment']['description']
                         )
                     self.organisation_context = OrganizationContextConfig(team=team, environment=environment)

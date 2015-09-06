@@ -59,6 +59,7 @@
         "organization_context": {
             "environment": {
                 "name": "DEV",
+                "color_code": "cc6d4a",
                 "description": "DEV environment"
             },
             "team": {

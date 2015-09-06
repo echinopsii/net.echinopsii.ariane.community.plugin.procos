@@ -99,7 +99,8 @@ class MapSocket(object):
                     break
         elif self.family == "AF_INET6":
             if self.destination_ip.startswith("::127") or \
-                    self.destination_ip == "::1":
+                    self.destination_ip == "::1" or \
+                    self.destination_ip == "::ffff:127.0.0.1":
                 destination_is_local = True
             else:
                 for nic in operating_system.nics:
@@ -109,6 +110,7 @@ class MapSocket(object):
                         break
         elif self.family == "AF_UNIX":
             destination_is_local = True
+
         return destination_is_local
 
     def map_socket_2_json(self):
