@@ -1,6 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 
-if [ $EUID -ne 0 ]; then
+if [ "$UID" = "" ]; then
+    UID = `id -u`
+fi
+
+if [ ${UID} -ne 0 ]; then
    echo "$0 must be run as root... Exit."
    exit 1
 fi
@@ -36,6 +40,7 @@ fi
 curl -L https://raw.githubusercontent.com/echinopsii/net.echinopsii.ariane.community.plugin.procos/master/misc/aprocos_configuration.json > /etc/ariane/aprocos_configuration.json
 curl -L https://raw.githubusercontent.com/echinopsii/net.echinopsii.ariane.community.plugin.procos/master/misc/aprocos_logging.json > /etc/ariane/aprocos_logging.json
 curl -L https://raw.githubusercontent.com/echinopsii/net.echinopsii.ariane.community.plugin.procos/master/misc/aprocos.sh > /usr/local/bin/aprocos
+chmod 755 /usr/local/bin/aprocos
 
 echo ""
 echo "Ariane ProcOS successfully installed on this operating system..."

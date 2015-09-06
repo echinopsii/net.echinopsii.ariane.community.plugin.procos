@@ -114,7 +114,7 @@ class ArianeConnector(object):
                                                                   context_address="", description="",
                                                                   parent_id=self.injector_ui_mapping_entity.id,
                                                                   display_roles=["sysreviewer"],
-                                                                  display_permissions=["injMapProcOS:display"])
+                                                                  display_permissions=["injMapSysProcOS:display"])
             self.injector_ui_system_entity.save()
             self.injector_ui_procos_entity = InjectorUITreeEntity(uitid="procos", value="ProcOS",
                                                                   uitype=InjectorUITreeEntity.entity_leaf_type,
@@ -123,9 +123,9 @@ class ArianeConnector(object):
                                                                   description="ProcOS injector", icon="icon-cog",
                                                                   parent_id=self.injector_ui_system_entity.id,
                                                                   display_roles=["sysadmin", "sysreviewer"],
-                                                                  display_permissions=["injMapProcOS:display"],
+                                                                  display_permissions=["injMapSysProcOS:display"],
                                                                   other_actions_roles={"action": ["sysadmin"]},
-                                                                  other_actions_perms={"action": ["injMapProcOS:action"]},
+                                                                  other_actions_perms={"action": ["injMapSysProcOS:action"]},
                                                                   remote_injector_tree_entity_gears_cache_id=
                                                                   self.gears_registry_cache_id,
                                                                   remote_injector_tree_entity_components_cache_id=

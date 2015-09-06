@@ -1,0 +1,22 @@
+{
+    "id": "ariane.community.plugin.procos",
+    "version": "master.SNAPSHOT",
+    "type": "community",
+    "distribs": [
+        "master.SNAPSHOT"
+    ],
+    "hook": {
+        "package": "plugins.procos",
+        "module": "procosProcessor",
+        "class": "procosProcessor"
+    },
+    "environment": [
+        {
+            "sqlScriptFP": "resources/sqlscripts/plugins/rabbitmq/idm_plugin_rabbitmq_insert.sql",
+            "deployCmdFP": "None",
+            "templateFP": "None",
+            "targetConf" : "None",
+            "defaultValuesFP": "None"
+        }
+    ]
+}
