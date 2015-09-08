@@ -585,14 +585,14 @@ class MappingGear(InjectorGearSkeleton):
     def sync_container_network(container, datacenter, routing_areas, subnets):
         if datacenter is not None:
             datacenter_properties = {
-                Container.DC_NAME_MAPPING_FIELD: datacenter.name,
-                Container.DC_ADDR_MAPPING_FIELD: datacenter.address,
-                Container.DC_TOWN_MAPPING_FIELD: datacenter.town,
-                Container.DC_CNTY_MAPPING_FIELD: datacenter.country,
-                Container.DC_GPSA_MAPPING_FIELD: datacenter.gpsLatitude,
-                Container.DC_GPSN_MAPPING_FIELD: datacenter.gpsLongitude
+                Container.PL_NAME_MAPPING_FIELD: datacenter.name,
+                Container.PL_ADDR_MAPPING_FIELD: datacenter.address,
+                Container.PL_TOWN_MAPPING_FIELD: datacenter.town,
+                Container.PL_CNTY_MAPPING_FIELD: datacenter.country,
+                Container.PL_GPSA_MAPPING_FIELD: datacenter.gpsLatitude,
+                Container.PL_GPSN_MAPPING_FIELD: datacenter.gpsLongitude
             }
-            container.add_property((Container.DC_MAPPING_PROPERTIES, datacenter_properties))
+            container.add_property((Container.PL_MAPPING_PROPERTIES, datacenter_properties))
 
         if routing_areas is not None:
             network_properties = []
