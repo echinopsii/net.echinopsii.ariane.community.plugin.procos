@@ -475,6 +475,7 @@ class DirectoryGear(InjectorGearSkeleton):
                                 if ip_address.ipa_os_instance_id != SystemGear.osi.id:
                                     ip_address.ipa_os_instance_id = SystemGear.osi.id
                                     ip_address.save()
+                            subnet.is_default = nic.is_default
                             SystemGear.osi.sync()
                             break
                 else:
@@ -604,7 +605,8 @@ class MappingGear(InjectorGearSkeleton):
                             {
                                 Container.SUBNET_NAME_MAPPING_FIELD: subnet.name,
                                 Container.SUBNET_IPAD_MAPPING_FIELD: subnet.ip,
-                                Container.SUBNET_MASK_MAPPING_FIELD: subnet.mask
+                                Container.SUBNET_MASK_MAPPING_FIELD: subnet.mask,
+                                Container.SUBNET_ISDEFAULT_MAPPING_FIELD: subnet.is_default
                             }
                         )
                 network_properties.append(

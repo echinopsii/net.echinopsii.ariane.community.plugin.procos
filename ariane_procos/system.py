@@ -21,6 +21,7 @@ import logging
 import os
 import socket
 import struct
+import netifaces
 import psutil
 
 __author__ = 'mffrench'
@@ -257,7 +258,7 @@ class NicDuplex(object):
 class NetworkInterfaceCard(object):
     def __init__(self, nic_id=None, name=None, mac_address=None, duplex=None, speed=None, mtu=None,
                  ipv4_id=None, ipv4_address=None, ipv4_mask=None, ipv4_broadcast=None, ipv4_fqdn=None,
-                 ipv6_address=None, ipv6_mask=None):
+                 ipv6_address=None, ipv6_mask=None, is_default=False):
         self.nic_id = nic_id
         self.name = name
         self.mac_address = mac_address
@@ -271,6 +272,7 @@ class NetworkInterfaceCard(object):
         self.ipv4_fqdn = ipv4_fqdn
         self.ipv6_address = ipv6_address
         self.ipv6_mask = ipv6_mask
+        self.is_default = is_default
 
     def __eq__(self, other):
         if self.nic_id != other.nic_id or self.name != other.name or self.mac_address != other.mac_address\
@@ -299,7 +301,8 @@ class NetworkInterfaceCard(object):
             'ipv4_broadcast': self.ipv4_broadcast,
             'ipv4_fqdn': self.ipv4_fqdn,
             'ipv6_address': self.ipv6_address,
-            'ipv6_mask': self.ipv6_mask
+            'ipv6_mask': self.ipv6_mask,
+            'is_default': self.is_default
         }
         return json_obj
 
@@ -444,10 +447,13 @@ class OperatingSystem(object):
         self.new_processs = []
         self.dead_processs = []
 
+        default_nic = netifaces.gateways()['default'][netifaces.AF_INET][1]
+
         for nic_name_stat, snicstats in psutil.net_if_stats().items():
+            is_default = (nic_name_stat == default_nic)
             nic = NetworkInterfaceCard(name=nic_name_stat,
                                        duplex=NetworkInterfaceCard.duplex_2_string(snicstats.duplex),
-                                       speed=snicstats.speed, mtu=snicstats.mtu)
+                                       speed=snicstats.speed, mtu=snicstats.mtu, is_default=is_default)
             for nic_name_snic, snic_table in psutil.net_if_addrs().items():
                 if nic_name_snic == nic_name_stat:
                     for snic in snic_table:
