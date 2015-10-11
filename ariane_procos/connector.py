@@ -21,7 +21,7 @@ import traceback
 from ariane_clip3.injector import InjectorService, InjectorUITreeEntity, InjectorUITreeService, \
     InjectorCachedComponentService, InjectorCachedGearService
 from ariane_clip3.mapping import MappingService, ContainerService
-from ariane_clip3.directory import DirectoryService, DatacenterService
+from ariane_clip3.directory import DirectoryService, LocationService
 
 __author__ = 'mffrench'
 
@@ -75,7 +75,7 @@ class ArianeConnector(object):
         DirectoryService(rest_args)
         # Test Directory Service
         try:
-            DatacenterService.get_datacenters()
+            LocationService.get_locations()
         except Exception as e:
             LOGGER.error("Problem while initializing Ariane directory service.")
             LOGGER.error(e.__str__())

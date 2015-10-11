@@ -19,7 +19,7 @@ class ConfigurationTest(unittest.TestCase):
 
     def test_ariane_good_conf(self):
         try:
-            config = Config().parse("aprocos_conf.json")
+            config = Config().parse("valid_conf.json")
         except Exception as e:
             self.fail('unexpected exception thrown: ' + str(e))
         else:

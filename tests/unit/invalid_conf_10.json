@@ -2,7 +2,7 @@
     "ariane_procos": {
         "sleeping_period": 60,
         "log_conf_file_path": "/some/log/file/path",
-        "potential_datacenters": [
+        "potential_locations": [
             {
                 "name": "Fake Datacenter",
                 "description": "Fake Datacenter for test purpose",
@@ -49,7 +49,8 @@
         "organization_context": {
             "environment": {
                 "name": "DEV",
-                "description": "DEV environment"
+                "description": "DEV environment",
+                "color_code": "cb6c4a"
             },
             "team": {
                 "name": "ARdev",

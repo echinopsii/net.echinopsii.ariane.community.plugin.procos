@@ -12,7 +12,7 @@
     "ariane_procos": {
         "sleeping_period": 60,
         "log_conf_file_path": "/etc/ariane/aprocos_logging.json",
-        "potential_datacenters": [
+        "potential_locations": [
             {
                 "name": "Fake Datacenter",
                 "description": "Fake Datacenter for test purpose",

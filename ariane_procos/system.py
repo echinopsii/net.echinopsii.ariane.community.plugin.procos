@@ -32,7 +32,7 @@ LOGGER = logging.getLogger(__name__)
 class MapSocket(object):
     def __init__(self, source_ip=None, source_port=None, source_endpoint_id=None,
                  destination_ip=None, destination_port=None, destination_osi_id=None,
-                 destination_subnet_id=None, destination_routing_area_id=None, destination_datacenter_id=None,
+                 destination_subnet_id=None, destination_routing_area_id=None, destination_location_id=None,
                  destination_endpoint_id=None, destination_node_id=None, destination_container_id=None,
                  family=None, rtype=None, status=None, link_id=None, transport_id=None, file_descriptors=None):
         self.source_ip = source_ip
@@ -44,7 +44,7 @@ class MapSocket(object):
         self.destination_osi_id = destination_osi_id
         self.destination_subnet_id = destination_subnet_id
         self.destination_routing_area_id = destination_routing_area_id
-        self.destination_datacenter_id = destination_datacenter_id
+        self.destination_location_id = destination_location_id
         self.destination_endpoint_id = destination_endpoint_id
         self.destination_node_id = destination_node_id
         self.destination_container_id = destination_container_id
@@ -130,7 +130,7 @@ class MapSocket(object):
             'destination_osi_id': self.destination_osi_id,
             'destination_subnet_id': self.destination_subnet_id,
             'destination_routing_area_id': self.destination_routing_area_id,
-            'destination_datacenter_id': self.destination_datacenter_id,
+            'destination_location_id': self.destination_location_id,
             'destination_endpoint_id': self.destination_endpoint_id,
             'destination_node_id': self.destination_node_id,
             'destination_container_id': self.destination_container_id
@@ -154,7 +154,7 @@ class MapSocket(object):
             destination_osi_id=json_obj['destination_osi_id'],
             destination_subnet_id=json_obj['destination_subnet_id'],
             destination_routing_area_id=json_obj['destination_routing_area_id'],
-            destination_datacenter_id=json_obj['destination_datacenter_id'],
+            destination_location_id=json_obj['destination_location_id'],
             destination_endpoint_id=json_obj['destination_endpoint_id'],
             destination_node_id=json_obj['destination_node_id'],
             destination_container_id=json_obj['destination_container_id']
@@ -340,13 +340,13 @@ class NetworkInterfaceCard(object):
 
 class OperatingSystem(object):
     def __init__(self, container_id=None, osi_id=None, ost_id=None, environment_id=None, team_id=None,
-                 datacenter_id=None, routing_area_ids=None, subnet_ids=None,
+                 location_id=None, routing_area_ids=None, subnet_ids=None,
                  hostname=None, last_nics=None, nics=None, last_processs=None, processs=None):
         self.container_id = container_id
 
         self.osi_id = osi_id
         self.ost_id = ost_id
-        self.datacenter_id = datacenter_id
+        self.location_id = location_id
         self.routing_area_ids = routing_area_ids if routing_area_ids is not None else []
         self.subnet_ids = subnet_ids if subnet_ids is not None else []
         self.environment_id = environment_id
@@ -397,7 +397,7 @@ class OperatingSystem(object):
             'container_id': self.container_id,
             'osi_id': self.osi_id,
             'ost_id': self.ost_id,
-            'datacenter_id': self.datacenter_id,
+            'location_id': self.location_id,
             'routing_area_ids': self.routing_area_ids,
             'subnet_ids': self.subnet_ids,
             'environment_id': self.environment_id,
@@ -429,8 +429,8 @@ class OperatingSystem(object):
 
         return OperatingSystem(
             container_id=json_obj['container_id'], osi_id=json_obj['osi_id'],
-            ost_id=json_obj['ost_id'], datacenter_id=json_obj['datacenter_id'],
-            environment_id=json_obj['datacenter_id'], team_id=json_obj['team_id'],
+            ost_id=json_obj['ost_id'], location_id=json_obj['location_id'],
+            environment_id=json_obj['environment_id'], team_id=json_obj['team_id'],
             routing_area_ids=json_obj['routing_area_ids'], subnet_ids=json_obj['subnet_ids'],
             hostname=json_obj['hostname'], last_nics=last_nics, nics=nics, last_processs=last_processs,
             processs=processs
@@ -556,7 +556,7 @@ class OperatingSystem(object):
                                                     map_socket.subnet_id = last_map_socket.destination_subnet_id
                                                     map_socket.routing_area_id = \
                                                         last_map_socket.destination_routing_area_id
-                                                    map_socket.datacenter_id = last_map_socket.destination_datacenter_id
+                                                    map_socket.location_id = last_map_socket.destination_location_id
                                                     map_socket.destination_endpoint_id = \
                                                         last_map_socket.destination_endpoint_id
                                                     map_socket.destination_node_id = \

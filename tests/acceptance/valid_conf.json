@@ -12,7 +12,7 @@
     "ariane_procos": {
         "sleeping_period": 20,
         "log_conf_file_path": "",
-        "potential_datacenters": [
+        "potential_locations": [
             {
                 "name": "CPE-lyon",
                 "description": "CPE Lyon School",
@@ -157,7 +157,8 @@
         "organization_context": {
             "environment": {
                 "name": "DEV",
-                "description": "DEV environment"
+                "description": "DEV environment",
+                "color_code": "cb6c4a"
             },
             "team": {
                 "name": "ARdev",

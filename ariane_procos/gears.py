@@ -24,7 +24,7 @@ import timeit
 import traceback
 from ariane_clip3.mapping import ContainerService, Container, NodeService, Node, Endpoint, EndpointService, Transport, \
     Link
-from ariane_clip3.directory import DatacenterService, Datacenter, RoutingAreaService, RoutingArea, OSInstanceService,\
+from ariane_clip3.directory import LocationService, Location, RoutingAreaService, RoutingArea, OSInstanceService,\
     OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team,\
     OSTypeService, OSType, Company, CompanyService
 from ariane_clip3.injector import InjectorGearSkeleton
@@ -71,12 +71,12 @@ class DirectoryGear(InjectorGearSkeleton):
             self.cache(running=self.running)
 
     def compute_current_possible_network(self, operating_system):
-        # Find current Datacenter, routing area and subnets according to runtime IP on NICs and possible datacenters:
-        current_possible_datacenter_config = []
+        # Find current Location, routing area and subnets according to runtime IP on NICs and possible locations:
+        current_possible_location_config = []
         current_possible_routing_area_config = []
         current_possible_subnet_config = []
 
-        current_possible_remote_vpn_datacenter_config = []
+        current_possible_remote_vpn_location_config = []
         current_possible_remote_vpn_routing_area_config = []
         current_possible_remote_vpn_subnet_config = []
 
@@ -85,23 +85,23 @@ class DirectoryGear(InjectorGearSkeleton):
             try:
                 if nic.ipv4_address is not None:
                     if not nic.ipv4_address.startswith('127'):
-                        for datacenter_config in SystemGear.config.potential_datacenters:
-                            for routing_area_config in datacenter_config.routing_areas:
+                        for location_config in SystemGear.config.potential_locations:
+                            for routing_area_config in location_config.routing_areas:
                                 for subnet_config in routing_area_config.subnets:
 
                                     if NetworkInterfaceCard.ip_is_in_subnet(nic.ipv4_address,
                                                                             subnet_config.subnet_ip,
                                                                             subnet_config.subnet_mask):
                                         if routing_area_config.type == RoutingArea.RA_TYPE_VPN:
-                                                current_possible_remote_vpn_datacenter_config.append(datacenter_config)
+                                                current_possible_remote_vpn_location_config.append(location_config)
                                                 current_possible_remote_vpn_routing_area_config.append(
                                                     routing_area_config)
                                                 current_possible_remote_vpn_subnet_config.append(subnet_config)
                                                 nic_is_located = True
                                                 break
                                         else:
-                                            if datacenter_config not in current_possible_datacenter_config:
-                                                current_possible_datacenter_config.append(datacenter_config)
+                                            if location_config not in current_possible_location_config:
+                                                current_possible_location_config.append(location_config)
                                             current_possible_routing_area_config.append(routing_area_config)
                                             current_possible_subnet_config.append(subnet_config)
                                             nic_is_located = True
@@ -122,12 +122,12 @@ class DirectoryGear(InjectorGearSkeleton):
             except Exception as e:
                 print(e.__str__())
 
-        if current_possible_datacenter_config.__len__() > 1:
-            LOGGER.warn('multiple current possible datacenter found - will ignore directories sync')
-        elif current_possible_datacenter_config.__len__() == 0:
-            LOGGER.warn('no current possible datacenter found - will ignore directories sync')
+        if current_possible_location_config.__len__() > 1:
+            LOGGER.warn('multiple current possible location found - will ignore directories sync')
+        elif current_possible_location_config.__len__() == 0:
+            LOGGER.warn('no current possible location found - will ignore directories sync')
 
-        if current_possible_datacenter_config.__len__() != 1:
+        if current_possible_location_config.__len__() != 1:
             self.is_network_sync_possible = False
         if current_possible_routing_area_config.__len__() == 0:
             self.is_network_sync_possible = False
@@ -135,10 +135,10 @@ class DirectoryGear(InjectorGearSkeleton):
             self.is_network_sync_possible = False
 
         self.current_possible_network = [
-            current_possible_datacenter_config,
+            current_possible_location_config,
             current_possible_routing_area_config,
             current_possible_subnet_config,
-            current_possible_remote_vpn_datacenter_config,
+            current_possible_remote_vpn_location_config,
             current_possible_remote_vpn_routing_area_config,
             current_possible_remote_vpn_subnet_config
         ]
@@ -267,23 +267,23 @@ class DirectoryGear(InjectorGearSkeleton):
             return
 
         # Sync network stuffs
-        current_possible_datacenter_config = self.current_possible_network[0]
+        current_possible_location_config = self.current_possible_network[0]
         current_possible_routing_area_config = self.current_possible_network[1]
         current_possible_subnet_config = self.current_possible_network[2]
-        current_possible_remote_vpn_datacenter_config = self.current_possible_network[3]
+        current_possible_remote_vpn_location_config = self.current_possible_network[3]
         current_possible_remote_vpn_routing_area_config = self.current_possible_network[4]
         current_possible_remote_vpn_subnet_config = self.current_possible_network[5]
 
-        current_datacenter = current_possible_datacenter_config[0]
+        current_location = current_possible_location_config[0]
 
-        # Sync datacenter
-        if operating_system.datacenter_id is not None:
-            SystemGear.datacenter = DatacenterService.find_datacenter(operating_system.datacenter_id)
-            if SystemGear.datacenter is not None and SystemGear.datacenter.name != current_datacenter.name:
+        # Sync location
+        if operating_system.location_id is not None:
+            SystemGear.location = LocationService.find_location(operating_system.location_id)
+            if SystemGear.location is not None and SystemGear.location.name != current_location.name:
                 # This OS has moved
                 LOGGER.debug("operating system has a new location !")
-                SystemGear.datacenter = None
-                operating_system.datacenter_id = None
+                SystemGear.location = None
+                operating_system.location_id = None
 
                 for subnet_id in SystemGear.osi.subnet_ids:
                     subnet_to_unbind = SubnetService.find_subnet(sb_id=subnet_id)
@@ -301,19 +301,19 @@ class DirectoryGear(InjectorGearSkeleton):
                         ip_to_unbind.remove()
                 SystemGear.osi.sync()
 
-        if SystemGear.datacenter is None:
-            SystemGear.datacenter = DatacenterService.find_datacenter(dc_name=current_datacenter.name)
-            if SystemGear.datacenter is None:
-                SystemGear.datacenter = Datacenter(name=current_datacenter.name,
-                                                   description=current_datacenter.description,
-                                                   address=current_datacenter.address,
-                                                   zip_code=current_datacenter.zipcode,
-                                                   town=current_datacenter.town,
-                                                   country=current_datacenter.country,
-                                                   gps_latitude=current_datacenter.gps_lat,
-                                                   gps_longitude=current_datacenter.gps_lng)
-                SystemGear.datacenter.save()
-            operating_system.datacenter_id = SystemGear.datacenter.id
+        if SystemGear.location is None:
+            SystemGear.location = LocationService.find_location(loc_name=current_location.name)
+            if SystemGear.location is None:
+                SystemGear.location = Location(name=current_location.name,
+                                               description=current_location.description,
+                                               address=current_location.address,
+                                               zip_code=current_location.zipcode,
+                                               town=current_location.town,
+                                               country=current_location.country,
+                                               gps_latitude=current_location.gps_lat,
+                                               gps_longitude=current_location.gps_lng)
+                SystemGear.location.save()
+            operating_system.location_id = SystemGear.location.id
 
         # Sync routing areas and subnets
         for cached_routing_area_id in operating_system.routing_area_ids:
@@ -371,22 +371,22 @@ class DirectoryGear(InjectorGearSkeleton):
             else:
                 operating_system.routing_area_ids.remove(cached_routing_area_id)
 
-        for remote_vpn_dc_config in current_possible_remote_vpn_datacenter_config:
-            vpn_dc = DatacenterService.find_datacenter(dc_name=remote_vpn_dc_config.name)
-            if vpn_dc is None:
-                vpn_dc = Datacenter(
-                    name=remote_vpn_dc_config.name,
-                    description=remote_vpn_dc_config.description,
-                    address=remote_vpn_dc_config.address,
-                    zip_code=remote_vpn_dc_config.zipcode,
-                    town=remote_vpn_dc_config.town,
-                    country=remote_vpn_dc_config.country,
-                    gps_latitude=remote_vpn_dc_config.gps_lat,
-                    gps_longitude=remote_vpn_dc_config.gps_lng
+        for remote_vpn_loc_config in current_possible_remote_vpn_location_config:
+            vpn_loc = LocationService.find_location(loc_name=remote_vpn_loc_config.name)
+            if vpn_loc is None:
+                vpn_loc = Location(
+                    name=remote_vpn_loc_config.name,
+                    description=remote_vpn_loc_config.description,
+                    address=remote_vpn_loc_config.address,
+                    zip_code=remote_vpn_loc_config.zipcode,
+                    town=remote_vpn_loc_config.town,
+                    country=remote_vpn_loc_config.country,
+                    gps_latitude=remote_vpn_loc_config.gps_lat,
+                    gps_longitude=remote_vpn_loc_config.gps_lng
                 )
-                vpn_dc.save()
+                vpn_loc.save()
 
-            for remote_routing_area_config in remote_vpn_dc_config.routing_areas:
+            for remote_routing_area_config in remote_vpn_loc_config.routing_areas:
                 if remote_routing_area_config in current_possible_remote_vpn_routing_area_config:
                     vpn_ra = RoutingAreaService.find_routing_area(ra_name=remote_routing_area_config.name)
                     if vpn_ra is None:
@@ -395,8 +395,8 @@ class DirectoryGear(InjectorGearSkeleton):
                                              ra_type=remote_routing_area_config.type,
                                              description=remote_routing_area_config.description)
                         vpn_ra.save()
-                    vpn_ra.add_datacenter(SystemGear.datacenter)
-                    vpn_ra.add_datacenter(vpn_dc)
+                    vpn_ra.add_location(SystemGear.location)
+                    vpn_ra.add_location(vpn_loc)
                     SystemGear.routing_areas.append(vpn_ra)
                     operating_system.routing_area_ids.append(vpn_ra.id)
 
@@ -410,8 +410,8 @@ class DirectoryGear(InjectorGearSkeleton):
                                                     ip=remote_subnet_config.subnet_ip,
                                                     mask=remote_subnet_config.subnet_mask)
                                 vpn_subnet.save()
-                            vpn_subnet.add_datacenter(SystemGear.datacenter)
-                            vpn_subnet.add_datacenter(vpn_dc)
+                            vpn_subnet.add_location(SystemGear.location)
+                            vpn_subnet.add_location(vpn_loc)
                             operating_system.subnet_ids.append(vpn_subnet.id)
                             SystemGear.subnets.append(vpn_subnet)
                             if vpn_subnet.id not in SystemGear.osi.subnet_ids:
@@ -426,7 +426,7 @@ class DirectoryGear(InjectorGearSkeleton):
                                            ra_type=routing_area_config.type,
                                            description=routing_area_config.description)
                 routing_area.save()
-                routing_area.add_datacenter(SystemGear.datacenter)
+                routing_area.add_location(SystemGear.location)
             operating_system.routing_area_ids.append(routing_area.id)
             SystemGear.routing_areas.append(routing_area)
 
@@ -439,7 +439,7 @@ class DirectoryGear(InjectorGearSkeleton):
                                         routing_area_id=routing_area.id,
                                         ip=subnet_config.subnet_ip, mask=subnet_config.subnet_mask)
                         subnet.save()
-                        subnet.add_datacenter(SystemGear.datacenter)
+                        subnet.add_location(SystemGear.location)
                     operating_system.subnet_ids.append(subnet.id)
                     SystemGear.subnets.append(subnet)
                     if subnet.id not in SystemGear.osi.subnet_ids:
@@ -498,7 +498,7 @@ class DirectoryGear(InjectorGearSkeleton):
                                              routing_area_id=local_routing_area.id,
                                              ip='127.0.0.0', mask='255.0.0.0')
                     loopback_subnet.save()
-                    loopback_subnet.add_datacenter(SystemGear.datacenter)
+                    loopback_subnet.add_location(SystemGear.location)
                     local_routing_area.sync()
 
                     SystemGear.osi.add_subnet(loopback_subnet)
@@ -583,17 +583,17 @@ class MappingGear(InjectorGearSkeleton):
             self.cache(running=self.running)
 
     @staticmethod
-    def sync_container_network(container, datacenter, routing_areas, subnets):
-        if datacenter is not None:
-            datacenter_properties = {
-                Container.PL_NAME_MAPPING_FIELD: datacenter.name,
-                Container.PL_ADDR_MAPPING_FIELD: datacenter.address,
-                Container.PL_TOWN_MAPPING_FIELD: datacenter.town,
-                Container.PL_CNTY_MAPPING_FIELD: datacenter.country,
-                Container.PL_GPSA_MAPPING_FIELD: datacenter.gpsLatitude,
-                Container.PL_GPSN_MAPPING_FIELD: datacenter.gpsLongitude
+    def sync_container_network(container, location, routing_areas, subnets):
+        if location is not None:
+            location_properties = {
+                Container.PL_NAME_MAPPING_FIELD: location.name,
+                Container.PL_ADDR_MAPPING_FIELD: location.address,
+                Container.PL_TOWN_MAPPING_FIELD: location.town,
+                Container.PL_CNTY_MAPPING_FIELD: location.country,
+                Container.PL_GPSA_MAPPING_FIELD: location.gpsLatitude,
+                Container.PL_GPSN_MAPPING_FIELD: location.gpsLongitude
             }
-            container.add_property((Container.PL_MAPPING_PROPERTIES, datacenter_properties))
+            container.add_property((Container.PL_MAPPING_PROPERTIES, location_properties))
 
         if routing_areas is not None:
             network_properties = []
@@ -621,7 +621,7 @@ class MappingGear(InjectorGearSkeleton):
                 container.add_property((Container.NETWORK_MAPPING_PROPERTIES, network_properties))
 
     def sync_container_properties(self):
-        self.sync_container_network(self.osi_container, SystemGear.datacenter, SystemGear.routing_areas,
+        self.sync_container_network(self.osi_container, SystemGear.location, SystemGear.routing_areas,
                                     SystemGear.subnets)
         if SystemGear.team is not None:
             team_properties = {
@@ -656,7 +656,7 @@ class MappingGear(InjectorGearSkeleton):
 
     @staticmethod
     def sync_remote_container_network(target_os_instance, target_container):
-        target_possible_datacenters = []
+        target_possible_locations = []
         target_routing_areas = []
         target_subnets = []
 
@@ -671,17 +671,17 @@ class MappingGear(InjectorGearSkeleton):
                 )
                 if target_routing_area is not None and target_routing_area not in target_routing_areas:
                     target_routing_areas.append(target_routing_area)
-                    for datacenter_id in target_routing_area.dc_ids:
-                        target_possible_datacenter = DatacenterService.find_datacenter(
-                            dc_id=datacenter_id
+                    for location_id in target_routing_area.loc_ids:
+                        target_possible_location = LocationService.find_location(
+                            loc_id=location_id
                         )
-                        if target_possible_datacenter is not None and \
-                                target_possible_datacenter not in target_possible_datacenters:
-                            target_possible_datacenters.append(target_possible_datacenter)
+                        if target_possible_location is not None and \
+                                target_possible_location not in target_possible_locations:
+                            target_possible_locations.append(target_possible_location)
 
-        if target_possible_datacenters.__len__() == 1:
-            target_datacenter = target_possible_datacenters[0]
-            MappingGear.sync_container_network(target_container, target_datacenter, target_routing_areas, target_subnets)
+        if target_possible_locations.__len__() == 1:
+            target_location = target_possible_locations[0]
+            MappingGear.sync_container_network(target_container, target_location, target_routing_areas, target_subnets)
         else:
             LOGGER.warn("REMOTE CONTAINER LOCALISATION HAS NOT BEEN FOUND")
 
@@ -754,7 +754,8 @@ class MappingGear(InjectorGearSkeleton):
                                         if map_socket.family == "AF_INET":
                                             target_fqdn = socket.gethostbyaddr(map_socket.destination_ip)[0]
                                         elif map_socket.family == "AF_INET6":
-                                            target_fqdn = socket.gethostbyaddr(MapSocket.ipv6_2_ipv4(map_socket.destination_ip))[0]
+                                            target_fqdn = socket.gethostbyaddr(MapSocket.ipv6_2_ipv4(
+                                                map_socket.destination_ip))[0]
 
                                     except socket.herror as e:
                                         LOGGER.debug(str(map_socket))
@@ -990,7 +991,7 @@ class SystemGear(InjectorGearSkeleton):
     hostname = None
 
     #static reference to up to date ariane directories objects linked to this System
-    datacenter = None
+    location = None
     routing_areas = []
     subnets = []
     osi = None
@@ -1003,16 +1004,17 @@ class SystemGear(InjectorGearSkeleton):
         SystemGear.hostname = socket.gethostname()
         SystemGear.config = config
         super(SystemGear, self).__init__(
-            gear_id='ariane.community.plugin.procos.gears.cache.system_gear@'+SystemGear.hostname,
-            gear_name='procos_system_gear@'+SystemGear.hostname,
-            gear_description='Ariane ProcOS system gear for '+SystemGear.hostname,
-            gear_admin_queue='ariane.community.plugin.procos.gears.cache.system_gear@'+SystemGear.hostname,
+            gear_id='ariane.community.plugin.procos.gears.cache.system_gear@'+str(SystemGear.hostname),
+            gear_name='procos_system_gear@'+str(SystemGear.hostname),
+            gear_description='Ariane ProcOS system gear for '+str(SystemGear.hostname),
+            gear_admin_queue='ariane.community.plugin.procos.gears.cache.system_gear@'+str(SystemGear.hostname),
             running=False
         )
         self.sleeping_period = config.sleeping_period
         self.service = None
-        self.service_name = 'system_procos@'+SystemGear.hostname+' gear'
-        component_type = SystemGear.config.system_context.os_type.name + " - " + SystemGear.config.system_context.os_type.architecture
+        self.service_name = 'system_procos@'+str(SystemGear.hostname)+' gear'
+        component_type = SystemGear.config.system_context.os_type.name + " - " + \
+            SystemGear.config.system_context.os_type.architecture
         self.component = SystemComponent.start(
             attached_gear_id=self.gear_id(),
             hostname=SystemGear.hostname,
@@ -1064,17 +1066,17 @@ class SystemGear(InjectorGearSkeleton):
 
     def gear_start(self):
         if self.service is not None:
-            LOGGER.warn('procos_system_gear@'+SystemGear.hostname+' has been started')
+            LOGGER.warn('procos_system_gear@'+str(SystemGear.hostname)+' has been started')
             self.running = True
             self.service = threading.Thread(target=self.run, name=self.service_name)
             self.service.start()
             self.cache(running=self.running)
         else:
-            LOGGER.warn('procos_system_gear@'+SystemGear.hostname+' has been restarted')
+            LOGGER.warn('procos_system_gear@'+str(SystemGear.hostname)+' has been restarted')
             self.on_start()
 
     def gear_stop(self):
         if self.running:
-            LOGGER.warn('procos_system_gear@'+SystemGear.hostname+' has been stopped')
+            LOGGER.warn('procos_system_gear@'+str(SystemGear.hostname)+' has been stopped')
             self.running = False
             self.cache(running=self.running)

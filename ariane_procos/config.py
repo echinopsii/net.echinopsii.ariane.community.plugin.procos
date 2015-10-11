@@ -112,7 +112,7 @@ class RoutingAreaConfig(object):
             return True
 
 
-class DatacenterConfig(object):
+class LocationConfig(object):
     def __init__(self, name=None, description=None, address=None, zipcode=None, town=None, country=None,
                  gps_lat=None, gps_lng=None):
         self.name = name
@@ -147,9 +147,9 @@ class Config(object):
         self.sleeping_period = None
         self.log_conf_file_path = None
 
-        #List of possible datacenters this OS instance could be located with routing area and subnets
+        #List of possible locations this OS instance could be located with routing area and subnets
         #(labtop of VM which can move through an hypervisor)
-        self.potential_datacenters = []
+        self.potential_locations = []
         self.system_context = None
         self.organisation_context = None
 
@@ -214,19 +214,19 @@ class Config(object):
                 self.log_conf_file_path = config['ariane_procos']['log_conf_file_path']
 
             if ariane_procos_missing_fields.__len__() == 0:
-                if config['ariane_procos']['potential_datacenters'] is not None:
-                    for datacenter in config['ariane_procos']['potential_datacenters']:
-                        datacenter_config = DatacenterConfig(
-                            name=datacenter['name'],
-                            description=datacenter['description'],
-                            address=datacenter['address'],
-                            zipcode=datacenter['zipcode'],
-                            town=datacenter['town'],
-                            country=datacenter['country'],
-                            gps_lat=datacenter['gps_lat'],
-                            gps_lng=datacenter['gps_lng']
+                if config['ariane_procos']['potential_locations'] is not None:
+                    for location in config['ariane_procos']['potential_locations']:
+                        location_config = LocationConfig(
+                            name=location['name'],
+                            description=location['description'],
+                            address=location['address'],
+                            zipcode=location['zipcode'],
+                            town=location['town'],
+                            country=location['country'],
+                            gps_lat=location['gps_lat'],
+                            gps_lng=location['gps_lng']
                         )
-                        for routing_area in datacenter['routing_areas']:
+                        for routing_area in location['routing_areas']:
                             routing_area_config = RoutingAreaConfig(
                                 name=routing_area['name'],
                                 description=routing_area['description'],
@@ -241,8 +241,8 @@ class Config(object):
                                     subnet_mask=subnet['subnet_mask']
                                 )
                                 routing_area_config.subnets.append(subnet_config)
-                            datacenter_config.routing_areas.append(routing_area_config)
-                        self.potential_datacenters.append(datacenter_config)
+                            location_config.routing_areas.append(routing_area_config)
+                        self.potential_locations.append(location_config)
 
                 if config['ariane_procos']['system_context'] is not None:
                     ost_company = CompanyConfig(
