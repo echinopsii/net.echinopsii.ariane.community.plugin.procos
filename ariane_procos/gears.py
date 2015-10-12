@@ -306,6 +306,7 @@ class DirectoryGear(InjectorGearSkeleton):
             if SystemGear.location is None:
                 SystemGear.location = Location(name=current_location.name,
                                                description=current_location.description,
+                                               type=current_location.type,
                                                address=current_location.address,
                                                zip_code=current_location.zipcode,
                                                town=current_location.town,

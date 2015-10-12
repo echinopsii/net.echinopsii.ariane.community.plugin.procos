@@ -16,6 +16,7 @@
             {
                 "name": "Fake Datacenter",
                 "description": "Fake Datacenter for test purpose",
+                "type": "DATACENTER",
                 "address": "1, rue Victor Grignard",
                 "zipcode": 69100,
                 "town": "Villeurbanne",

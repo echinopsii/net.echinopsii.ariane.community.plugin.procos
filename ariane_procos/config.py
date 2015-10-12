@@ -113,10 +113,11 @@ class RoutingAreaConfig(object):
 
 
 class LocationConfig(object):
-    def __init__(self, name=None, description=None, address=None, zipcode=None, town=None, country=None,
+    def __init__(self, name=None, description=None, type=None, address=None, zipcode=None, town=None, country=None,
                  gps_lat=None, gps_lng=None):
         self.name = name
         self.description = description
+        self.type = type
         self.address = address
         self.zipcode = zipcode
         self.town = town
@@ -219,6 +220,7 @@ class Config(object):
                         location_config = LocationConfig(
                             name=location['name'],
                             description=location['description'],
+                            type=location['type'],
                             address=location['address'],
                             zipcode=location['zipcode'],
                             town=location['town'],
