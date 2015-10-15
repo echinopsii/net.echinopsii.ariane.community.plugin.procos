@@ -1,4 +1,4 @@
-# installer plugin rabbitmq processor
+# installer plugin ProcOS processor
 #
 # Copyright (C) 2014 Mathilde Ffrench
 #
@@ -15,11 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
-from plugins.rabbitmq.dbRabbitmqDirectoryMySQLInitiator import dbRabbitmqDirectoryMySQLInitiator
-from plugins.rabbitmq.dbIDMMySQLPopulator import dbIDMMySQLPopulator
-from plugins.rabbitmq.cuRabbitmqInjectorManagedServiceProcessor import rabbitmqInjectorManagedServiceSyringe
-from plugins.rabbitmq.cuRabbitmqInjectorComponentsCacheProcessor import cuInjectorComponentsCacheProcessor
-from plugins.rabbitmq.cuRabbitmqInjectorGearsCacheProcessor import cuInjectorGearsCacheProcessor, cpInjectorGearsCacheDir
+from plugins.procos.dbIDMMySQLPopulator import dbIDMMySQLPopulator
 
 __author__ = 'mffrench'
 
@@ -31,8 +27,10 @@ class procosProcessor:
         print("%-- Plugin ProcOS configuration : \n")
         self.homeDirPath = homeDirPath
         self.silent = silent
-        if not os.path.exists(self.homeDirPath + "/ariane/cache/plugins/rabbitmq/"):
-            os.makedirs(self.homeDirPath + "/ariane/cache/plugins/rabbitmq/", 0o755)
+        if not os.path.exists(self.homeDirPath + "/ariane/cache/core/injector/remote/components/"):
+            os.makedirs(self.homeDirPath + "/ariane/cache/core/injector/remote/components/", 0o755)
+        if not os.path.exists(self.homeDirPath + "/ariane/cache/core/injector/remote/gears/"):
+            os.makedirs(self.homeDirPath + "/ariane/cache/core/injector/remote/gears/", 0o755)
         self.procosIDMMySQLPopulator = dbIDMMySQLPopulator(idmDBConfig)
 
     def process(self):

@@ -1,4 +1,4 @@
-# installer plugin RabbitMQ idm MySQL db initiator
+# installer plugin ProcOS idm MySQL db initiator
 #
 # Copyright (C) 2014 Mathilde Ffrench
 #
@@ -27,4 +27,4 @@ class dbIDMMySQLPopulator(AMySQLdbInit):
         self.dbServerHost = dbConfig['host']
         self.dbServerPort = dbConfig['port']
         self.dbName = dbConfig['database']
-        self.sqlScriptFilePath = "resources/sqlscripts/plugins/procos/idm_plugin_rabbitmq_insert.sql"
+        self.sqlScriptFilePath = "resources/sqlscripts/plugins/procos/idm_plugin_procos_insert.sql"

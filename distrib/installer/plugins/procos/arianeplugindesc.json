@@ -12,7 +12,7 @@
     },
     "environment": [
         {
-            "sqlScriptFP": "resources/sqlscripts/plugins/rabbitmq/idm_plugin_rabbitmq_insert.sql",
+            "sqlScriptFP": "resources/sqlscripts/plugins/procos/idm_plugin_procos_insert.sql",
             "deployCmdFP": "None",
             "templateFP": "None",
             "targetConf" : "None",
