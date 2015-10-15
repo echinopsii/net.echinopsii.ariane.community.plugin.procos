@@ -24,7 +24,7 @@ fi
 pip3 uninstall ariane_procos -y > /dev/null
 pip3 install ariane_procos > /dev/null
 if [ $? -ne 0 ]; then
-    pip3 install --pre ariane_procos
+    pip3 install ariane_procos
     echo "Problems while installing Ariane ProcOS python module... Exit."
     exit 1
 fi
