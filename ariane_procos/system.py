@@ -526,8 +526,7 @@ class OperatingSystem(object):
                                 proc.mapping_id = last_proc.mapping_id
                                 proc.is_node = last_proc.is_node
                             else:
-                                exe_tab = proc.exe.split(os.path.sep)
-                                name = '[' + str(proc.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
+                                name = '[' + str(proc.pid) + '] ' + str(proc.name)
                                 LOGGER.debug('process not saved on DB correctly ' + name)
                                 self.new_processs.append(proc)
 

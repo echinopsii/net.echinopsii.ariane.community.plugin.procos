@@ -23,7 +23,7 @@ import time
 import timeit
 import traceback
 from ariane_clip3.mapping import ContainerService, Container, NodeService, Node, Endpoint, EndpointService, Transport, \
-    Link
+    Link, LinkService
 from ariane_clip3.directory import LocationService, Location, RoutingAreaService, RoutingArea, OSInstanceService,\
     OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team,\
     OSTypeService, OSType, Company, CompanyService
@@ -706,8 +706,7 @@ class MappingGear(InjectorGearSkeleton):
         t = timeit.default_timer()
         for proc in operating_system.processs:
             if proc.mapping_id is not None and proc.new_map_sockets is not None:
-                exe_tab = proc.exe.split(os.path.sep)
-                name = '[' + str(proc.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
+                name = '[' + str(proc.pid) + '] ' + str(proc.name)
                 LOGGER.debug(str(proc.new_map_sockets.__len__()) + ' new socket found for process ' + name)
                 for map_socket in proc.new_map_sockets:
                     if map_socket.source_ip is not None and map_socket.source_port is not None:
@@ -880,9 +879,15 @@ class MappingGear(InjectorGearSkeleton):
 
                                     if target_endpoint is not None:
                                         map_socket.destination_endpoint_id = target_endpoint.id
+                                        LOGGER.debug('target socket endpoint on mapping db : (' + target_url + ',' +
+                                                     str(map_socket.destination_endpoint_id) + ')')
                                     if target_node is not None:
                                         map_socket.destination_node_id = target_node.id
+                                        LOGGER.debug('target socket node on mapping db : (' + target_url + ',' +
+                                                     str(map_socket.destination_node_id) + ')')
                                     map_socket.destination_container_id = target_container.id
+                                    LOGGER.debug('target socket container on mapping db : (' + target_url + ',' +
+                                                 str(map_socket.destination_container_id) + ')')
 
                                     if map_socket.destination_endpoint_id is not None and \
                                             map_socket.source_endpoint_id is not None:
@@ -902,8 +907,7 @@ class MappingGear(InjectorGearSkeleton):
                         LOGGER.debug('no source ip / port - ' + str(map_socket))
 
             if proc.mapping_id is not None and proc.dead_map_sockets is not None:
-                exe_tab = proc.exe.split(os.path.sep)
-                name = '[' + str(proc.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
+                name = '[' + str(proc.pid) + '] ' + str(proc.name)
                 LOGGER.debug(str(proc.dead_map_sockets.__len__()) + ' dead socket found for process ['
                              + str(proc.mapping_id) + ']' + name)
                 for map_socket in proc.dead_map_sockets:
@@ -927,8 +931,7 @@ class MappingGear(InjectorGearSkeleton):
         t = timeit.default_timer()
         LOGGER.debug(str(operating_system.new_processs.__len__()) + ' new processes found')
         for process in operating_system.new_processs:
-            exe_tab = process.exe.split(os.path.sep)
-            name = '[' + str(process.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
+            name = '[' + str(process.pid) + '] ' + str(process.name)
 
             process_map_obj = Node(
                 name=name,
@@ -953,8 +956,7 @@ class MappingGear(InjectorGearSkeleton):
         LOGGER.debug(str(operating_system.dead_processs.__len__()) + ' old processes found')
         for process in operating_system.dead_processs:
             process_map_obj = None
-            exe_tab = process.exe.split(os.path.sep)
-            name = '[' + str(process.pid) + '] ' + exe_tab[exe_tab.__len__() - 1]
+            name = '[' + str(process.pid) + '] ' + str(process.name)
             if process.mapping_id is None:
                 LOGGER.error('dead process (' + name + ') has not been saved on mapping db !')
             else:
