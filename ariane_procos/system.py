@@ -92,13 +92,14 @@ class MapSocket(object):
 
     def is_local_destination(self, operating_system):
         destination_is_local = False
-        if self.family == "AF_INET":
+
+        if self.destination_ip is not None and self.family == "AF_INET":
             for nic in operating_system.nics:
                 if nic.ipv4_address is not None and \
                         self.destination_ip == nic.ipv4_address:
                     destination_is_local = True
                     break
-        elif self.family == "AF_INET6":
+        elif self.destination_ip is not None and self.family == "AF_INET6":
             if self.destination_ip.startswith("::127") or \
                     self.destination_ip == "::1" or \
                     self.destination_ip == "::ffff:127.0.0.1":
@@ -341,7 +342,8 @@ class NetworkInterfaceCard(object):
 class OperatingSystem(object):
     def __init__(self, container_id=None, osi_id=None, ost_id=None, environment_id=None, team_id=None,
                  location_id=None, routing_area_ids=None, subnet_ids=None,
-                 hostname=None, last_nics=None, nics=None, last_processs=None, processs=None):
+                 hostname=None, last_nics=None, nics=None, last_processs=None, processs=None,
+                 duplex_links_endpoint=None, wip_delete_duplex_links_endpoints=None):
         self.container_id = container_id
 
         self.osi_id = osi_id
@@ -359,6 +361,9 @@ class OperatingSystem(object):
         self.processs = processs if processs is not None else []
         self.new_processs = []
         self.dead_processs = []
+
+        self.duplex_links_endpoints = duplex_links_endpoint if duplex_links_endpoint is not None else []
+        self.wip_delete_duplex_links_endpoints = wip_delete_duplex_links_endpoints if wip_delete_duplex_links_endpoints is not None else []
 
     def __eq__(self, other):
         if self.osi_id != other.osi_id or self.hostname != other.hostname:
@@ -401,7 +406,9 @@ class OperatingSystem(object):
             'routing_area_ids': self.routing_area_ids,
             'subnet_ids': self.subnet_ids,
             'environment_id': self.environment_id,
-            'team_id': self.team_id
+            'team_id': self.team_id,
+            'duplex_links_endpoints': self.duplex_links_endpoints,
+            'wip_delete_duplex_links_endpoints': self.wip_delete_duplex_links_endpoints
         }
         return json_obj
 
@@ -433,7 +440,8 @@ class OperatingSystem(object):
             environment_id=json_obj['environment_id'], team_id=json_obj['team_id'],
             routing_area_ids=json_obj['routing_area_ids'], subnet_ids=json_obj['subnet_ids'],
             hostname=json_obj['hostname'], last_nics=last_nics, nics=nics, last_processs=last_processs,
-            processs=processs
+            processs=processs, duplex_links_endpoint=json_obj['duplex_links_endpoints'],
+            wip_delete_duplex_links_endpoints=json_obj['wip_delete_duplex_links_endpoints']
         )
 
     def update(self):

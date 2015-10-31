@@ -698,6 +698,15 @@ class MappingGear(InjectorGearSkeleton):
             teams_props.append(team_properties)
         target_container.add_property((Container.TEAM_SUPPORT_MAPPING_PROPERTIES, teams_props))
 
+    @staticmethod
+    def find_map_socket(map_sockets, endpoint_id):
+        ret = None
+        for map_socket in map_sockets:
+            if map_socket.source_endpoint_id == endpoint_id or map_socket.destination_endpoint_id == endpoint_id:
+                ret= map_socket
+                break
+        return ret
+
     def sync_map_socket(self, operating_system):
         if self.osi_container is None:
             LOGGER.error('operating system container is not synced')
@@ -732,15 +741,101 @@ class MappingGear(InjectorGearSkeleton):
                                 LOGGER.warn("process as container not yet implemented !")
 
                             if source_parent_node_id != 0:
-                                source_url = proto + map_socket.source_ip + ":" + str(map_socket.source_port) + \
-                                    str(map_socket.file_descriptors) if map_socket.status != "LISTEN" else ""
+                                if map_socket.status != "LISTEN":
+                                    source_url = proto + map_socket.source_ip + ":" + str(map_socket.source_port) + \
+                                                 str(map_socket.file_descriptors)
+                                else:
+                                    source_url = proto + map_socket.source_ip + ":" + str(map_socket.source_port)
 
-                                source_endpoint = Endpoint(url=source_url, parent_node_id=proc.mapping_id)
-                                source_endpoint.add_property(('type', map_socket.type))
-                                source_endpoint.add_property(('family', map_socket.family))
-                                source_endpoint.add_property(('status', map_socket.status))
-                                source_endpoint.add_property(('file descriptors', map_socket.file_descriptors))
-                                source_endpoint.save()
+                                destination_is_local = map_socket.is_local_destination(operating_system)
+
+                                source_endpoint = EndpointService.find_endpoint(
+                                    url=source_url
+                                )
+                                if source_endpoint is None and destination_is_local:
+                                    if map_socket.source_ip == "127.0.0.1":
+                                        other_source_url_possibility = proto + "::1:" + str(map_socket.source_port) + \
+                                                                       str(map_socket.file_descriptors)
+                                        source_endpoint = EndpointService.find_endpoint(
+                                           url=other_source_url_possibility
+                                        )
+                                        if source_endpoint is None:
+                                            other_source_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.source_port) + \
+                                                                           str(map_socket.file_descriptors)
+                                            source_endpoint = EndpointService.find_endpoint(
+                                                url=other_source_url_possibility
+                                            )
+                                        if source_endpoint is None:
+                                            other_source_url_possibility = proto + "::127.0.0.1:" + str(map_socket.source_port) + \
+                                                                           str(map_socket.file_descriptors)
+                                            source_endpoint = EndpointService.find_endpoint(
+                                                url=other_source_url_possibility
+                                            )
+                                    elif map_socket.source_ip == "::ffff:127.0.0.1":
+                                        other_source_url_possibility = proto + "::1:" + str(map_socket.source_port) + \
+                                                                       str(map_socket.file_descriptors)
+                                        source_endpoint = EndpointService.find_endpoint(
+                                            url=other_source_url_possibility
+                                        )
+                                        if source_endpoint is None:
+                                            other_source_url_possibility = proto + "127.0.0.1:" + str(map_socket.source_port) + \
+                                                                           str(map_socket.file_descriptors)
+                                            source_endpoint = EndpointService.find_endpoint(
+                                                url=other_source_url_possibility
+                                            )
+                                        if source_endpoint is None:
+                                            other_source_url_possibility = proto + "::127.0.0.1:" + str(map_socket.source_port) + \
+                                                                           str(map_socket.file_descriptors)
+                                            source_endpoint = EndpointService.find_endpoint(
+                                                url=other_source_url_possibility
+                                            )
+                                    elif map_socket.source_ip == "::127.0.0.1":
+                                        other_source_url_possibility = proto + "::1:" + str(map_socket.source_port) + \
+                                                                       str(map_socket.file_descriptors)
+                                        source_endpoint = EndpointService.find_endpoint(
+                                            url=other_source_url_possibility
+                                        )
+                                        if source_endpoint is None:
+                                            other_source_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.source_port) + \
+                                                                           str(map_socket.file_descriptors)
+                                            source_endpoint = EndpointService.find_endpoint(
+                                                url=other_source_url_possibility
+                                            )
+                                        if source_endpoint is None:
+                                            other_source_url_possibility = proto + "127.0.0.1:" + str(map_socket.source_port) + \
+                                                                           str(map_socket.file_descriptors)
+                                            source_endpoint = EndpointService.find_endpoint(
+                                                url=other_source_url_possibility
+                                            )
+                                    elif map_socket.source_ip == "::1":
+                                        other_source_url_possibility = proto + "127.0.0.1:" + str(map_socket.source_port) + \
+                                                                       str(map_socket.file_descriptors)
+                                        source_endpoint = EndpointService.find_endpoint(
+                                            url=other_source_url_possibility
+                                        )
+                                        if source_endpoint is None:
+                                            other_source_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.source_port) + \
+                                                                           str(map_socket.file_descriptors)
+                                            source_endpoint = EndpointService.find_endpoint(
+                                                url=other_source_url_possibility
+                                            )
+                                        if source_endpoint is None:
+                                            other_source_url_possibility = proto + "::127.0.0.1:" + str(map_socket.source_port) + \
+                                                                           str(map_socket.file_descriptors)
+                                            source_endpoint = EndpointService.find_endpoint(
+                                                url=other_source_url_possibility
+                                            )
+
+                                if source_endpoint is None:
+                                    source_endpoint = Endpoint(url=source_url, parent_node_id=proc.mapping_id)
+                                    source_endpoint.add_property(('type', map_socket.type))
+                                    source_endpoint.add_property(('family', map_socket.family))
+                                    source_endpoint.add_property(('status', map_socket.status))
+                                    source_endpoint.add_property(('file descriptors', map_socket.file_descriptors))
+                                    source_endpoint.save()
+                                elif source_endpoint.id not in operating_system.duplex_links_endpoints:
+                                    operating_system.duplex_links_endpoints.append(source_endpoint.id)
+
                                 map_socket.source_endpoint_id = source_endpoint.id
                                 LOGGER.debug('source socket endpoint on mapping db : (' + source_url + ',' +
                                              str(map_socket.source_endpoint_id) + ')')
@@ -766,7 +861,6 @@ class MappingGear(InjectorGearSkeleton):
                                         LOGGER.debug(e.__str__())
                                         LOGGER.debug(traceback.format_exc())
 
-                                    destination_is_local = map_socket.is_local_destination(operating_system)
                                     target_container = None if not destination_is_local else self.osi_container
                                     target_node = None
                                     target_endpoint = None
@@ -833,6 +927,7 @@ class MappingGear(InjectorGearSkeleton):
                                                 container_id=target_container.id
                                             )
                                             target_node.save()
+
                                         target_endpoint = EndpointService.find_endpoint(
                                             url=target_url
                                         )
@@ -866,6 +961,80 @@ class MappingGear(InjectorGearSkeleton):
                                                             url=target_url
                                                         )
                                                         if target_endpoint is None:
+                                                            if map_socket.destination_ip == "127.0.0.1":
+                                                                other_target_url_possibility = proto + "::1:" + str(map_socket.destination_port) + \
+                                                                                               str(srv_socket.file_descriptors)
+                                                                target_endpoint = EndpointService.find_endpoint(
+                                                                    url=other_target_url_possibility
+                                                                )
+                                                                if target_endpoint is None:
+                                                                    other_target_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.destination_port) + \
+                                                                                                   str(srv_socket.file_descriptors)
+                                                                    target_endpoint = EndpointService.find_endpoint(
+                                                                        url=other_target_url_possibility
+                                                                    )
+                                                                if target_endpoint is None:
+                                                                    other_target_url_possibility = proto + "::127.0.0.1:" + str(map_socket.destination_port) + \
+                                                                                                   str(srv_socket.file_descriptors)
+                                                                    target_endpoint = EndpointService.find_endpoint(
+                                                                        url=other_target_url_possibility
+                                                                    )
+                                                            elif map_socket.destination_ip == "::ffff:127.0.0.1":
+                                                                other_target_url_possibility = proto + "::1:" + str(map_socket.destination_port) + \
+                                                                                               str(srv_socket.file_descriptors)
+                                                                target_endpoint = EndpointService.find_endpoint(
+                                                                    url=other_target_url_possibility
+                                                                )
+                                                                if target_endpoint is None:
+                                                                    other_target_url_possibility = proto + "127.0.0.1:" + str(map_socket.destination_port) + \
+                                                                                                   str(srv_socket.file_descriptors)
+                                                                    target_endpoint = EndpointService.find_endpoint(
+                                                                        url=other_target_url_possibility
+                                                                    )
+                                                                if target_endpoint is None:
+                                                                    other_target_url_possibility = proto + "::127.0.0.1:" + str(map_socket.destination_port) + \
+                                                                                                   str(srv_socket.file_descriptors)
+                                                                    target_endpoint = EndpointService.find_endpoint(
+                                                                        url=other_target_url_possibility
+                                                                    )
+                                                            elif map_socket.source_ip == "::127.0.0.1":
+                                                                other_target_url_possibility = proto + "::1:" + str(map_socket.destination_port) + \
+                                                                                               str(srv_socket.file_descriptors)
+                                                                target_endpoint = EndpointService.find_endpoint(
+                                                                    url=other_target_url_possibility
+                                                                )
+                                                                if target_endpoint is None:
+                                                                    other_target_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.destination_port) + \
+                                                                                                   str(srv_socket.file_descriptors)
+                                                                    target_endpoint = EndpointService.find_endpoint(
+                                                                        url=other_target_url_possibility
+                                                                    )
+                                                                if target_endpoint is None:
+                                                                    other_target_url_possibility = proto + "127.0.0.1:" + str(map_socket.destination_port) + \
+                                                                                                   str(srv_socket.file_descriptors)
+                                                                    target_endpoint = EndpointService.find_endpoint(
+                                                                        url=other_target_url_possibility
+                                                                    )
+                                                            elif map_socket.source_ip == "::1":
+                                                                other_target_url_possibility = proto + "127.0.0.1:" + str(map_socket.destination_port) + \
+                                                                                               str(srv_socket.file_descriptors)
+                                                                target_endpoint = EndpointService.find_endpoint(
+                                                                    url=other_target_url_possibility
+                                                                )
+                                                                if target_endpoint is None:
+                                                                    other_target_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.destination_port) + \
+                                                                                                   str(srv_socket.file_descriptors)
+                                                                    target_endpoint = EndpointService.find_endpoint(
+                                                                        url=other_target_url_possibility
+                                                                    )
+                                                                if target_endpoint is None:
+                                                                    other_target_url_possibility = proto + "::127.0.0.1:" + str(map_socket.destination_port) + \
+                                                                                                   str(srv_socket.file_descriptors)
+                                                                    target_endpoint = EndpointService.find_endpoint(
+                                                                        url=other_target_url_possibility
+                                                                    )
+
+                                                        if target_endpoint is None:
                                                             target_endpoint = Endpoint(
                                                                 url=target_url, parent_node_id=target_node.id
                                                             )
@@ -875,6 +1044,8 @@ class MappingGear(InjectorGearSkeleton):
                                                             target_endpoint.add_property(('file descriptors',
                                                                                           srv_socket.file_descriptors))
                                                             target_endpoint.save()
+                                                        elif target_endpoint.id not in operating_system.duplex_links_endpoints:
+                                                            operating_system.duplex_links_endpoints.append(target_endpoint.id)
                                                     break
 
                                     if target_endpoint is not None:
@@ -911,14 +1082,51 @@ class MappingGear(InjectorGearSkeleton):
                 LOGGER.debug(str(proc.dead_map_sockets.__len__()) + ' dead socket found for process ['
                              + str(proc.mapping_id) + ']' + name)
                 for map_socket in proc.dead_map_sockets:
-                    if map_socket.source_endpoint_id is not None:
+                    #if map_socket.link_id is not None:
+                    #    link = LinkService.find_link(lid=map_socket.link_id)
+                    #    if link is not None:
+                    #        link.remove()
+                    #    else:
+                    #        LOGGER.warn("Dead socket (link : " + str(map_socket.link_id) + ") "
+                    #                    "doesn't exist anymore on DB !")
+                    if map_socket.source_endpoint_id is not None and \
+                       (
+                            map_socket.source_endpoint_id not in operating_system.wip_delete_duplex_links_endpoints or
+                            map_socket.source_endpoint_id not in operating_system.duplex_links_endpoints
+                       ):
                         source_endpoint = EndpointService.find_endpoint(eid=map_socket.source_endpoint_id)
                         if source_endpoint is not None:
+                            LOGGER.debug('Remove source endpoint ' + str(map_socket.source_endpoint_id))
                             source_endpoint.remove()
-                    if map_socket.destination_endpoint_id is not None:
+                            if map_socket.source_endpoint_id in operating_system.duplex_links_endpoints:
+                                operating_system.wip_delete_duplex_links_endpoints.append(map_socket.source_endpoint_id)
+                        else:
+                            LOGGER.warn("Dead socket (source endpoint : " + str(map_socket.source_endpoint_id) +
+                                        ") doesn't exist anymore on DB!")
+                    elif map_socket.source_endpoint_id is not None and \
+                            map_socket.source_endpoint_id in operating_system.wip_delete_duplex_links_endpoints:
+                        operating_system.wip_delete_duplex_links_endpoints.remove(map_socket.source_endpoint_id)
+
+                    if map_socket.destination_endpoint_id is not None and \
+                            (
+                                map_socket.destination_endpoint_id not in operating_system.wip_delete_duplex_links_endpoints or
+                                map_socket.destination_endpoint_id not in operating_system.duplex_links_endpoints
+                            ):
                         target_endpoint = EndpointService.find_endpoint(eid=map_socket.destination_endpoint_id)
                         if target_endpoint is not None:
-                            target_endpoint.remove()
+                            array_link = LinkService.find_link(tep_id=target_endpoint.id)
+                            if array_link.__len__() == 0:
+                                LOGGER.debug('Remove target endpoint ' + str(map_socket.destination_endpoint_id))
+                                target_endpoint.remove()
+                                if map_socket.destination_endpoint_id in operating_system.duplex_links_endpoints:
+                                    operating_system.wip_delete_duplex_links_endpoints.append(map_socket.destination_endpoint_id)
+                        else:
+                            LOGGER.warn("Dead socket (target endpoint : " +
+                                        str(map_socket.destination_endpoint_id) +
+                                        ") doesn't exist anymore on DB!")
+                    elif map_socket.destination_endpoint_id is not None and \
+                            map_socket.destination_endpoint_id in operating_system.wip_delete_duplex_links_endpoints:
+                        operating_system.wip_delete_duplex_links_endpoints.remove(map_socket.destination_endpoint_id)
 
         sync_proc_time = round(timeit.default_timer()-t)
         LOGGER.debug('time : {0}'.format(sync_proc_time))

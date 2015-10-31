@@ -120,7 +120,7 @@ class ArianeConnector(object):
                                                                   uitype=InjectorUITreeEntity.entity_leaf_type,
                                                                   context_address=
                                                                   "/ariane/views/injectors/external.jsf?id=procos",
-                                                                  description="ProcOS injector", icon="icon-cog",
+                                                                  description="ProcOS injector", icon="icon-procos-injector",
                                                                   parent_id=self.injector_ui_system_entity.id,
                                                                   display_roles=["sysadmin", "sysreviewer"],
                                                                   display_permissions=["injMapSysProcOS:display"],
