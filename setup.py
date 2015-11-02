@@ -23,7 +23,7 @@ setup(name='ariane_procos',
       download_url='https://github.com/echinopsii/net.echinopsii.ariane.community.plugin.procos.git/tarball/0.1.1-b02',
       packages=['ariane_procos'],
       license='AGPLv3',
-      install_requires=['netifaces', 'psutil', 'pykka', 'ariane_clip3=0.1.1-b01'],
+      install_requires=['netifaces', 'psutil', 'pykka', 'ariane_clip3==0.1.1-b01'],
       package_data={'': ['LICENSE', 'README.md']},
       classifiers=[
           'Development Status :: 4 - Beta',
