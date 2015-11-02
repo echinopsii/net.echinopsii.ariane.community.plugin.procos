@@ -163,9 +163,9 @@ class MapSocket(object):
 
     @staticmethod
     def type_2_string(mstype):
-        if mstype == socket.SocketType.SOCK_STREAM:
+        if mstype == socket.SOCK_STREAM:
             return 'SOCK_STREAM'
-        elif mstype == socket.SocketType.SOCK_DGRAM:
+        elif mstype == socket.SOCK_DGRAM:
             return 'SOCK_DGRAM'
         else:
             return mstype
