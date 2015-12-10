@@ -12,6 +12,26 @@
     "ariane_procos": {
         "sleeping_period": 60,
         "log_conf_file_path": "/some/log/file/path",
+        "local_routingarea": {
+            "name": "fakeos.local",
+            "multicast": "NOLIMIT",
+            "type": "VIRT",
+            "description": "fakeos.local routing area",
+            "subnets": [
+                {
+                    "name": "fakeos.loopback",
+                    "description": "fakeos loopback subnet",
+                    "subnet_ip": "127.0.0.0",
+                    "subnet_mask": "255.0.0.0"
+                },
+                {
+                    "name": "fakeos.docker",
+                    "description": "fakeos docker subnet",
+                    "subnet_ip": "172.17.42.0",
+                    "subnet_mask": "255.255.0.0"
+                }
+            ]
+        },
         "potential_locations": [
             {
                 "name": "Fake Datacenter",

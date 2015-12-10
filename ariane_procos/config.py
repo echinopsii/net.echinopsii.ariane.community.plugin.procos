@@ -150,6 +150,7 @@ class Config(object):
 
         #List of possible locations this OS instance could be located with routing area and subnets
         #(labtop of VM which can move through an hypervisor)
+        self.local_routing_area = None
         self.potential_locations = []
         self.system_context = None
         self.organisation_context = None
@@ -215,6 +216,21 @@ class Config(object):
                 self.log_conf_file_path = config['ariane_procos']['log_conf_file_path']
 
             if ariane_procos_missing_fields.__len__() == 0:
+                if config['ariane_procos']['local_routingarea'] is not None:
+                    self.local_routing_area = RoutingAreaConfig(
+                        name=config['ariane_procos']['local_routingarea']['name'],
+                        description=config['ariane_procos']['local_routingarea']['description'],
+                        multicast=config['ariane_procos']['local_routingarea']['multicast'],
+                        ra_type=config['ariane_procos']['local_routingarea']['type'],
+                    )
+                    for subnet in config['ariane_procos']['local_routingarea']['subnets']:
+                        subnet_config = SubnetConfig(
+                            name=subnet['name'],
+                            description=subnet['description'],
+                            subnet_ip=subnet['subnet_ip'],
+                            subnet_mask=subnet['subnet_mask']
+                        )
+                        self.local_routing_area.subnets.append(subnet_config)
                 if config['ariane_procos']['potential_locations'] is not None:
                     for location in config['ariane_procos']['potential_locations']:
                         location_config = LocationConfig(

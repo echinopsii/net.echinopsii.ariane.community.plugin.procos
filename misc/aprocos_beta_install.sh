@@ -21,6 +21,39 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+#which easy_install-3.3 > /dev/null
+#if [ $? -ne 0 ]; then
+#    which easy_install-3.4 > /dev/null
+#    if [ $? -ne 0 ]; then
+#        which easy_install-3.5 > /dev/null
+#        if [ $? -ne 0 ]; then
+#            echo "$0 needs easy_install-3.3|3.4|3.5"
+#            exit 1
+#        else
+#            EASY_INSTALL=`which easy_instal-3.5`
+#        fi
+#    else
+#        EASY_INSTALL=`which easy_install-3.4`
+#    fi
+#else
+#    EASY_INSTALL=`which easy_install-3.3`
+#fi
+
+#curl -L https://pypi.python.org/packages/3.3/n/netifaces-merged/netifaces_merged-0.9.0-py3.3-linux-x86_64.egg#md5=269c66235a25e83509b0cbdc2dab28e9 > /tmp/netifaces.egg
+#$EASY_INSTALL /tmp/netifaces.egg
+
+which apt-get > /dev/null
+if [ $? -ne 0 ]; then
+    which rpm > /dev/null
+    if [ $? -ne 0 ]; then
+        echo "apt-get nor rpm not found. Your OS is not supported !"
+    else
+        yum install gcc python3-devel -y > /dev/null
+    fi
+else
+    apt-get install gcc python3-dev -y > /dev/null
+fi
+
 pip3 uninstall ariane_procos -y > /dev/null
 pip3 install --pre ariane_procos > /dev/null
 if [ $? -ne 0 ]; then
