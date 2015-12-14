@@ -883,7 +883,7 @@ class MappingGear(InjectorGearSkeleton):
                                                     product = target_os_instance_type.name + " - " + \
                                                         target_os_instance_type.architecture \
                                                         if target_os_instance_type is not None else\
-                                                        "Unknown OS Type",
+                                                        "Unknown OS Type"
 
                                                     target_os_instance_type_cmp = CompanyService.find_company(
                                                         cmp_id=target_os_instance_type.company_id
