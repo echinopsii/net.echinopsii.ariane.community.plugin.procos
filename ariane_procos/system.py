@@ -19,6 +19,7 @@ import copy
 import json
 import logging
 import os
+import re
 import socket
 import struct
 import netifaces
@@ -78,6 +79,8 @@ class MapSocket(object):
             ipv4 = "127.0.0.1"
         elif ipv6 == "::":
             ipv4 = "0.0.0.0"
+        elif re.match(r"::*\.*\.*\.*", ipv6.lower()):
+            ipv4 = ipv6.split("::")[1]
         return ipv4
 
     def transform_system_ipv6_to_ipv4(self):
