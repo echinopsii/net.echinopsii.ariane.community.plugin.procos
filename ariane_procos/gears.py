@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-import os
 import socket
 import threading
 import time
@@ -684,7 +683,7 @@ class MappingGear(InjectorGearSkeleton):
             target_location = target_possible_locations[0]
             MappingGear.sync_container_network(target_container, target_location, target_routing_areas, target_subnets)
         else:
-            LOGGER.warn("REMOTE CONTAINER LOCALISATION HAS NOT BEEN FOUND")
+            LOGGER.warn("REMOTE CONTAINER LOCALISATION HAS NOT BEEN FOUND FOR " + target_container.name)
 
     @staticmethod
     def sync_remote_container_team(target_os_instance, target_container):
@@ -865,7 +864,7 @@ class MappingGear(InjectorGearSkeleton):
                                     target_node = None
                                     target_endpoint = None
 
-                                    if target_fqdn is not None:
+                                    if target_fqdn != "localhost" and target_fqdn is not None:
                                         target_ipa = IPAddressService.find_ip_address(ipa_fqdn=target_fqdn)
                                         if target_ipa is not None:
                                             target_os_instance = OSInstanceService.find_os_instance(
@@ -890,7 +889,7 @@ class MappingGear(InjectorGearSkeleton):
                                                     ) if target_os_instance_type is not None else None
                                                     company = target_os_instance_type_cmp.name\
                                                         if target_os_instance_type_cmp is not None else\
-                                                        "Unknown OS Type Company"
+                                                            "Unknown OS Type Company"
 
                                                     name = target_fqdn if target_fqdn is not None else\
                                                         map_socket.destination_ip
