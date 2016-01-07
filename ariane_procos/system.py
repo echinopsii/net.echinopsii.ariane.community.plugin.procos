@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import copy
+from ipaddress import ip_network, IPv4Address
 import json
 import logging
 import os
@@ -313,13 +314,8 @@ class NetworkInterfaceCard(object):
     @staticmethod
     def ip_is_in_subnet(ip_address, subnet_ip, subnet_mask):
         ret = False
-        LOGGER.debug("Tested ip address: " + ip_address + "; subnet_ip: " + subnet_ip + "; subnet_mask: " + subnet_mask)
         if ip_address and subnet_ip and subnet_mask:
-            ip_address_long = struct.unpack('!L', socket.inet_aton(ip_address))[0]
-            subnet_ip_long = struct.unpack('!L', socket.inet_aton(subnet_ip))[0]
-            subnet_mask_long = struct.unpack('!L', socket.inet_aton(subnet_mask))[0]
-            ret = (ip_address_long & subnet_mask_long == subnet_ip_long)
-        LOGGER.debug("ret = " + str(ret))
+            ret = IPv4Address(ip_address) in ip_network(subnet_ip+'/' + subnet_mask)
         return ret
 
     @staticmethod

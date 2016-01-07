@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
+import os
 import socket
 import threading
 import time
@@ -79,6 +80,21 @@ class DirectoryGear(InjectorGearSkeleton):
         current_possible_remote_vpn_routing_area_config = []
         current_possible_remote_vpn_subnet_config = []
 
+        local_routing_area = SystemGear.config.local_routing_area
+        if local_routing_area is not None:
+            local_routing_area.name = SystemGear.hostname+".local"
+            local_routing_area.description = SystemGear.hostname+".local routing area"
+            local_routing_area.multicast = RoutingArea.RA_MULTICAST_NOLIMIT
+            local_routing_area.ra_type = RoutingArea.RA_TYPE_VIRT
+        else:
+            local_routing_area = RoutingAreaConfig(
+                name=SystemGear.hostname+".local",
+                description=SystemGear.hostname+".local routing area",
+                multicast=RoutingArea.RA_MULTICAST_NOLIMIT,
+                ra_type=RoutingArea.RA_TYPE_VIRT
+            )
+        local_virt_subnet_config = []
+
         for nic in operating_system.nics:
             nic_is_located = False
             try:
@@ -111,6 +127,15 @@ class DirectoryGear(InjectorGearSkeleton):
                                 break
 
                         if not nic_is_located:
+                            for subnet_config in local_routing_area.subnets:
+                                if NetworkInterfaceCard.ip_is_in_subnet(nic.ipv4_address,
+                                                                        subnet_config.subnet_ip,
+                                                                        subnet_config.subnet_mask):
+                                    local_virt_subnet_config.append(subnet_config)
+                                    nic_is_located = True
+                                    break
+
+                        if not nic_is_located:
                             if nic.mac_address is not None:
                                 LOGGER.warn('nic ' + nic.mac_address + '/' + nic.ipv4_address +
                                             ' has not been located on the possibles networks')
@@ -139,7 +164,9 @@ class DirectoryGear(InjectorGearSkeleton):
             current_possible_subnet_config,
             current_possible_remote_vpn_location_config,
             current_possible_remote_vpn_routing_area_config,
-            current_possible_remote_vpn_subnet_config
+            current_possible_remote_vpn_subnet_config,
+            local_routing_area,
+            local_virt_subnet_config
         ]
 
     @staticmethod
@@ -273,6 +300,9 @@ class DirectoryGear(InjectorGearSkeleton):
         current_possible_remote_vpn_routing_area_config = self.current_possible_network[4]
         current_possible_remote_vpn_subnet_config = self.current_possible_network[5]
 
+        local_routing_area = self.current_possible_network[6]
+        local_virt_subnet_config = self.current_possible_network[7]
+
         current_location = current_possible_location_config[0]
 
         # Sync location
@@ -321,7 +351,8 @@ class DirectoryGear(InjectorGearSkeleton):
             if cached_routing_area is not None:
                 mimic_cached_routing_area_config = RoutingAreaConfig(name=cached_routing_area.name)
                 if mimic_cached_routing_area_config in current_possible_routing_area_config or \
-                        mimic_cached_routing_area_config in current_possible_remote_vpn_routing_area_config:
+                        mimic_cached_routing_area_config in current_possible_remote_vpn_routing_area_config or \
+                        mimic_cached_routing_area_config != local_routing_area:
                     for subnet_id in cached_routing_area.subnet_ids:
                         subnet = SubnetService.find_subnet(sb_id=subnet_id)
                         if subnet is not None:
@@ -353,7 +384,7 @@ class DirectoryGear(InjectorGearSkeleton):
                     if mimic_cached_routing_area_config in current_possible_remote_vpn_routing_area_config:
                         current_possible_remote_vpn_routing_area_config.remove(mimic_cached_routing_area_config)
 
-                else:
+                elif mimic_cached_routing_area_config != local_routing_area:
                     for subnet_id in cached_routing_area.subnet_ids:
                         subnet = SubnetService.find_subnet(sb_id=subnet_id)
                         if subnet is not None:
@@ -445,6 +476,55 @@ class DirectoryGear(InjectorGearSkeleton):
                     if subnet.id not in SystemGear.osi.subnet_ids:
                         SystemGear.osi.add_subnet(subnet)
 
+        #CLEAN LOCAL SUBNETS FIRST
+        for local_subnet_config in local_virt_subnet_config:
+            subnet = SubnetService.find_subnet(sb_name=local_subnet_config.name)
+            if subnet is not None:
+                if subnet.id in operating_system.subnet_ids:
+                    operating_system.subnet_ids.remove(subnet.id)
+                if subnet in SystemGear.subnets:
+                    SystemGear.subnets.remove(subnet)
+                subnet.remove()
+        #THEN CLEAN LOCAL RA
+        loc_ra = RoutingAreaService.find_routing_area(ra_name=local_routing_area.name)
+        if loc_ra is not None:
+            if loc_ra.id in operating_system.routing_area_ids:
+                operating_system.routing_area_ids.remove(loc_ra.id)
+            if loc_ra in SystemGear.routing_areas:
+                SystemGear.routing_areas.remove(loc_ra)
+            loc_ra.remove()
+
+        #FINALLY REINIT LOCAL RA AND SUBNETS
+        loc_ra = RoutingArea(name=local_routing_area.name,
+                             multicast=local_routing_area.multicast,
+                             ra_type=local_routing_area.type,
+                             description=local_routing_area.description)
+        loc_ra.save()
+        loc_ra.add_location(SystemGear.location)
+        operating_system.routing_area_ids.append(loc_ra.id)
+        SystemGear.routing_areas.append(loc_ra)
+
+        loopback_subnet_conf = SubnetConfig(
+            name=SystemGear.hostname+".loopback",
+            description=SystemGear.hostname + " loopback subnet",
+            subnet_ip="127.0.0.0",
+            subnet_mask="255.0.0.0"
+        )
+        if loopback_subnet_conf not in local_virt_subnet_config:
+            local_virt_subnet_config.append(loopback_subnet_conf)
+
+        for local_subnet_config in local_virt_subnet_config:
+            subnet = Subnet(name=local_subnet_config.name,
+                            description=local_subnet_config.description,
+                            routing_area_id=loc_ra.id,
+                            ip=local_subnet_config.subnet_ip, mask=local_subnet_config.subnet_mask)
+            subnet.save()
+            subnet.add_location(SystemGear.location)
+            loc_ra.sync()
+            SystemGear.osi.add_subnet(subnet)
+            operating_system.subnet_ids.append(subnet.id)
+            SystemGear.subnets.append(subnet)
+
         SystemGear.osi.sync()
         for ipv4_id in SystemGear.osi.ip_address_ids:
             ipv4 = IPAddressService.find_ip_address(ipa_id=ipv4_id)
@@ -479,38 +559,14 @@ class DirectoryGear(InjectorGearSkeleton):
                             SystemGear.osi.sync()
                             break
                 else:
-                    local_routing_area = RoutingAreaService.find_routing_area(ra_name=SystemGear.hostname+".local")
-                    if local_routing_area is None:
-                        local_routing_area = RoutingArea(name=SystemGear.hostname+".local",
-                                                         multicast=RoutingArea.RA_MULTICAST_NOLIMIT,
-                                                         ra_type=RoutingArea.RA_TYPE_VIRT,
-                                                         description=SystemGear.hostname+".local routing area")
-                        local_routing_area.save()
-                    operating_system.routing_area_ids.append(local_routing_area.id)
-                    SystemGear.routing_areas.append(local_routing_area)
-
                     loopback_subnet = SubnetService.find_subnet(sb_name=SystemGear.hostname+".loopback")
-                    if loopback_subnet is not None:
-                        loopback_subnet.remove()
-
-                    loopback_subnet = Subnet(name=SystemGear.hostname+".loopback",
-                                             description=SystemGear.hostname + " loopback subnet",
-                                             routing_area_id=local_routing_area.id,
-                                             ip='127.0.0.0', mask='255.0.0.0')
-                    loopback_subnet.save()
-                    loopback_subnet.add_location(SystemGear.location)
-                    local_routing_area.sync()
-
-                    SystemGear.osi.add_subnet(loopback_subnet)
-                    operating_system.subnet_ids.append(loopback_subnet.id)
-                    SystemGear.subnets.append(loopback_subnet)
-
                     ip_address = IPAddressService.find_ip_address(ipa_fqdn=nic.ipv4_fqdn)
-                    if ip_address is None:
-                        ip_address = IPAddress(ip_address=nic.ipv4_address, fqdn=nic.ipv4_fqdn,
-                                               ipa_subnet_id=loopback_subnet.id, ipa_osi_id=SystemGear.osi.id)
-                        ip_address.save()
-                        loopback_subnet.sync()
+                    if ip_address is not None:
+                        ip_address.remove()
+                    ip_address = IPAddress(ip_address=nic.ipv4_address, fqdn=nic.ipv4_fqdn,
+                                           ipa_subnet_id=loopback_subnet.id, ipa_osi_id=SystemGear.osi.id)
+                    ip_address.save()
+                    loopback_subnet.sync()
 
     def init_ariane_directories(self, component):
         operating_system = component.operating_system.get()
