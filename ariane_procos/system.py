@@ -99,16 +99,20 @@ class MapSocket(object):
 
         if self.destination_ip is not None and self.family == "AF_INET":
             for nic in operating_system.nics:
-                if nic.ipv4_address is not None and \
-                        self.destination_ip == nic.ipv4_address:
+                if NetworkInterfaceCard.ip_is_in_subnet(self.destination_ip,
+                                                        nic.ipv4_subnet_addr, nic.ipv4_subnet_mask):
                     destination_is_local = True
                     break
         elif self.destination_ip is not None and self.family == "AF_INET6":
-            if self.destination_ip.startswith("::127") or \
-                    self.destination_ip == "::1" or \
-                    self.destination_ip == "::ffff:127.0.0.1":
-                destination_is_local = True
+            destination_ipv4 = MapSocket.ipv6_2_ipv4(self.destination_ip)
+            if destination_ipv4 != self.destination_ip:
+                for nic in operating_system.nics:
+                    if NetworkInterfaceCard.ip_is_in_subnet(destination_ipv4,
+                                                            nic.ipv4_subnet_addr, nic.ipv4_subnet_mask):
+                        destination_is_local = True
+                        break
             else:
+                #TODO: check is ipv6 in subnet ?
                 for nic in operating_system.nics:
                     if nic.ipv6_address is not None and \
                             self.destination_ip == nic.ipv6_address:
@@ -116,6 +120,8 @@ class MapSocket(object):
                         break
         elif self.family == "AF_UNIX":
             destination_is_local = True
+
+        LOGGER.debug(str(self.destination_ip) + " is local: " + str(destination_is_local))
 
         return destination_is_local
 
@@ -262,8 +268,8 @@ class NicDuplex(object):
 
 class NetworkInterfaceCard(object):
     def __init__(self, nic_id=None, name=None, mac_address=None, duplex=None, speed=None, mtu=None,
-                 ipv4_id=None, ipv4_address=None, ipv4_mask=None, ipv4_broadcast=None, ipv4_fqdn=None,
-                 ipv6_address=None, ipv6_mask=None, is_default=False):
+                 ipv4_id=None, ipv4_address=None, ipv4_subnet_addr=None, ipv4_subnet_mask=None, ipv4_broadcast=None,
+                 ipv4_fqdn=None, ipv6_address=None, ipv6_mask=None, is_default=False):
         self.nic_id = nic_id
         self.name = name
         self.mac_address = mac_address
@@ -272,7 +278,8 @@ class NetworkInterfaceCard(object):
         self.mtu = mtu
         self.ipv4_id = ipv4_id
         self.ipv4_address = ipv4_address
-        self.ipv4_mask = ipv4_mask
+        self.ipv4_subnet_addr = ipv4_subnet_addr
+        self.ipv4_subnet_mask = ipv4_subnet_mask
         self.ipv4_broadcast = ipv4_broadcast
         self.ipv4_fqdn = ipv4_fqdn
         self.ipv6_address = ipv6_address
@@ -283,8 +290,8 @@ class NetworkInterfaceCard(object):
         if self.nic_id != other.nic_id or self.name != other.name or self.mac_address != other.mac_address\
                 or self.duplex != other.duplex or self.speed != other.speed or self.mtu != other.mtu\
                 or self.ipv4_id != other.ipv4_id or self.ipv4_address != other.ipv4_address\
-                or self.ipv4_mask != other.ipv4_mask or self.ipv4_fqdn != other.ipv4_fqdn\
-                or self.ipv4_broadcast != other.ipv4_broadcast:
+                or self.ipv4_subnet_mask != other.ipv4_subnet_mask \
+                or self.ipv4_fqdn != other.ipv4_fqdn or self.ipv4_broadcast != other.ipv4_broadcast:
             return False
         else:
             return True
@@ -302,7 +309,8 @@ class NetworkInterfaceCard(object):
             'speed': self.speed,
             'mtu': self.mtu,
             'ipv4_address': self.ipv4_address,
-            'ipv4_mask': self.ipv4_mask,
+            'ipv4_subnet_addr': self.ipv4_subnet_addr,
+            'ipv4_subnet_mask': self.ipv4_subnet_mask,
             'ipv4_broadcast': self.ipv4_broadcast,
             'ipv4_fqdn': self.ipv4_fqdn,
             'ipv6_address': self.ipv6_address,
@@ -323,7 +331,9 @@ class NetworkInterfaceCard(object):
         return NetworkInterfaceCard(nic_id=json_obj['nic_id'], name=json_obj['name'],
                                     mac_address=json_obj['mac_address'], duplex=json_obj['duplex'],
                                     speed=json_obj['speed'], mtu=json_obj['mtu'],
-                                    ipv4_address=json_obj['ipv4_address'], ipv4_mask=json_obj['ipv4_mask'],
+                                    ipv4_address=json_obj['ipv4_address'],
+                                    ipv4_subnet_addr=json_obj['ipv4_subnet_addr'],
+                                    ipv4_subnet_mask=json_obj['ipv4_subnet_mask'],
                                     ipv4_broadcast=json_obj['ipv4_broadcast'], ipv4_fqdn=json_obj['ipv4_fqdn'],
                                     ipv4_id=json_obj['ipv4_id'], ipv6_address=json_obj['ipv6_address'],
                                     ipv6_mask=json_obj['ipv6_mask'])
@@ -470,7 +480,9 @@ class OperatingSystem(object):
                             nic.mac_address = snic.address
                         elif snic.family == socket.AddressFamily.AF_INET:
                             nic.ipv4_address = snic.address
-                            nic.ipv4_mask = snic.netmask
+                            nic.ipv4_subnet_addr = \
+                                str(ip_network(snic.address + '/' + snic.netmask, strict=False).network_address)
+                            nic.ipv4_subnet_mask = snic.netmask
                             nic.ipv4_broadcast = snic.broadcast
                             try:
                                 nic.ipv4_fqdn = socket.gethostbyaddr(snic.address)[0]

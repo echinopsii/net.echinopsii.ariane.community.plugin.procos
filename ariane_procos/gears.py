@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-import os
 import socket
 import threading
 import time
@@ -103,24 +102,20 @@ class DirectoryGear(InjectorGearSkeleton):
                         for location_config in SystemGear.config.potential_locations:
                             for routing_area_config in location_config.routing_areas:
                                 for subnet_config in routing_area_config.subnets:
-
                                     if NetworkInterfaceCard.ip_is_in_subnet(nic.ipv4_address,
                                                                             subnet_config.subnet_ip,
                                                                             subnet_config.subnet_mask):
                                         if routing_area_config.type == RoutingArea.RA_TYPE_VPN:
-                                                current_possible_remote_vpn_location_config.append(location_config)
-                                                current_possible_remote_vpn_routing_area_config.append(
-                                                    routing_area_config)
-                                                current_possible_remote_vpn_subnet_config.append(subnet_config)
-                                                nic_is_located = True
-                                                break
+                                            current_possible_remote_vpn_location_config.append(location_config)
+                                            current_possible_remote_vpn_routing_area_config.append(routing_area_config)
+                                            current_possible_remote_vpn_subnet_config.append(subnet_config)
                                         else:
                                             if location_config not in current_possible_location_config:
                                                 current_possible_location_config.append(location_config)
                                             current_possible_routing_area_config.append(routing_area_config)
                                             current_possible_subnet_config.append(subnet_config)
-                                            nic_is_located = True
-                                            break
+                                        nic_is_located = True
+                                        break
                                 if nic_is_located:
                                     break
                             if nic_is_located:
@@ -700,7 +695,7 @@ class MappingGear(InjectorGearSkeleton):
                 gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.hostname,
                 primary_admin_gate_name=SystemGear.config.system_context.admin_gate_protocol + ' daemon',
                 company=SystemGear.config.system_context.os_type.company.name,
-                product=SystemGear.config.system_context.os_type.name + '-' +
+                product=SystemGear.config.system_context.os_type.name + ' - ' +
                 SystemGear.config.system_context.os_type.architecture,
                 c_type='Operating System'
             )
@@ -770,7 +765,10 @@ class MappingGear(InjectorGearSkeleton):
         t = timeit.default_timer()
         for proc in operating_system.processs:
             if proc.mapping_id is not None and proc.new_map_sockets is not None:
-                name = '[' + str(proc.pid) + '] ' + str(proc.name)
+                if proc.name != "exe":
+                    name = '[' + str(proc.pid) + '] ' + str(proc.name)
+                else:
+                    name = '[' + str(proc.pid) + '] ' + str(proc.name) + ' - ' + proc.cmdline[0]
                 LOGGER.debug(str(proc.new_map_sockets.__len__()) + ' new socket found for process ' + name)
                 for map_socket in proc.new_map_sockets:
                     if map_socket.source_ip is not None and map_socket.source_port is not None:
@@ -1133,7 +1131,10 @@ class MappingGear(InjectorGearSkeleton):
                         LOGGER.debug('no source ip / port - ' + str(map_socket))
 
             if proc.mapping_id is not None and proc.dead_map_sockets is not None:
-                name = '[' + str(proc.pid) + '] ' + str(proc.name)
+                if proc.name != "exe":
+                    name = '[' + str(proc.pid) + '] ' + str(proc.name)
+                else:
+                    name = '[' + str(proc.pid) + '] ' + str(proc.name) + ' - ' + proc.cmdline[0]
                 LOGGER.debug(str(proc.dead_map_sockets.__len__()) + ' dead socket found for process ['
                              + str(proc.mapping_id) + ']' + name)
                 for map_socket in proc.dead_map_sockets:
@@ -1194,7 +1195,10 @@ class MappingGear(InjectorGearSkeleton):
         t = timeit.default_timer()
         LOGGER.debug(str(operating_system.new_processs.__len__()) + ' new processes found')
         for process in operating_system.new_processs:
-            name = '[' + str(process.pid) + '] ' + str(process.name)
+            if process.name != "exe":
+                name = '[' + str(process.pid) + '] ' + str(process.name)
+            else:
+                name = '[' + str(process.pid) + '] ' + str(process.name) + ' - ' + process.cmdline[0]
 
             process_map_obj = Node(
                 name=name,
@@ -1219,7 +1223,11 @@ class MappingGear(InjectorGearSkeleton):
         LOGGER.debug(str(operating_system.dead_processs.__len__()) + ' old processes found')
         for process in operating_system.dead_processs:
             process_map_obj = None
-            name = '[' + str(process.pid) + '] ' + str(process.name)
+            if process.name != "exe":
+                name = '[' + str(process.pid) + '] ' + str(process.name)
+            else:
+                name = '[' + str(process.pid) + '] ' + str(process.name) + ' - ' + process.cmdline[0]
+
             if process.mapping_id is None:
                 LOGGER.error('dead process (' + name + ') has not been saved on mapping db !')
             else:
