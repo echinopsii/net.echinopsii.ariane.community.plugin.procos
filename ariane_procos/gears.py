@@ -25,7 +25,7 @@ from ariane_clip3.mapping import ContainerService, Container, NodeService, Node,
     Link, LinkService
 from ariane_clip3.directory import LocationService, Location, RoutingAreaService, RoutingArea, OSInstanceService,\
     OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team,\
-    OSTypeService, OSType, Company, CompanyService
+    OSTypeService, OSType, Company, CompanyService, NICardService, NICard
 from ariane_clip3.injector import InjectorGearSkeleton
 from ariane_procos.components import SystemComponent
 from ariane_procos.config import RoutingAreaConfig, SubnetConfig
@@ -182,6 +182,11 @@ class DirectoryGear(InjectorGearSkeleton):
                     admin_gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.hostname)
                 SystemGear.osi.save()
             operating_system.osi_id = SystemGear.osi.id
+
+        #CLEAN NICs
+        for nic_id in SystemGear.osi.niCard_ids:
+            nic = NICardService.find_niCard(nic_id=nic_id)
+            nic.remove()
 
     @staticmethod
     def sync_operating_system_type(operating_system):
@@ -480,6 +485,7 @@ class DirectoryGear(InjectorGearSkeleton):
                 if subnet in SystemGear.subnets:
                     SystemGear.subnets.remove(subnet)
                 subnet.remove()
+
         #THEN CLEAN LOCAL RA
         loc_ra = RoutingAreaService.find_routing_area(ra_name=local_routing_area.name)
         if loc_ra is not None:
@@ -535,6 +541,7 @@ class DirectoryGear(InjectorGearSkeleton):
                 SystemGear.osi.ip_address_ids.remove(ipv4_id)
 
         for nic in operating_system.nics:
+            ip_address=None
             if nic.ipv4_address is not None:
                 if not nic.ipv4_address.startswith('127'):
                     for subnet in SystemGear.subnets:
@@ -562,6 +569,28 @@ class DirectoryGear(InjectorGearSkeleton):
                                            ipa_subnet_id=loopback_subnet.id, ipa_osi_id=SystemGear.osi.id)
                     ip_address.save()
                     loopback_subnet.sync()
+
+            if (nic.mac_address is None or not nic.mac_address) or nic.name == "lo":
+                nicmcaddr = nic.ipv4_fqdn
+            else:
+                nicmcaddr = nic.mac_address
+            if nicmcaddr is not None and nicmcaddr:
+                nic2save = NICardService.find_niCard(nic_mac_Address=nicmcaddr)
+                if nic2save is None:
+                   nic2save = NICard(
+                       name=SystemGear.hostname+"."+nic.name,
+                       macAddress=nicmcaddr,
+                       duplex=nic.duplex,
+                       speed=nic.speed,
+                       mtu=nic.mtu,
+                       nic_osi_id=operating_system.osi_id,
+                       nic_ipa_id=ip_address.id if ip_address is not None else None
+                   )
+                else:
+                    nic2save.nic_ipa_id = ip_address.id if ip_address is not None else None
+                nic2save.save()
+            else:
+                LOGGER.error("Error while saving nic : " + str(nic))
 
     def init_ariane_directories(self, component):
         operating_system = component.operating_system.get()
