@@ -689,14 +689,22 @@ class MappingGear(InjectorGearSkeleton):
                                 Container.SUBNET_ISDEFAULT_MAPPING_FIELD: subnet.is_default
                             }
                         )
-                network_properties.append(
-                    {
-                        Container.RAREA_NAME_MAPPING_FIELD: routing_area.name,
-                        Container.RAREA_MLTC_MAPPING_FIELD: routing_area.multicast,
-                        Container.RAREA_TYPE_MAPPING_FIELD: routing_area.type,
-                        Container.RAREA_SUBNETS: routing_area_subnets
-                    }
-                )
+                if routing_area_subnets.__len__() > 0:
+                    network_properties.append(
+                        {
+                            Container.RAREA_NAME_MAPPING_FIELD: routing_area.name,
+                            Container.RAREA_MLTC_MAPPING_FIELD: routing_area.multicast,
+                            Container.RAREA_TYPE_MAPPING_FIELD: routing_area.type,
+                            Container.RAREA_SUBNETS: routing_area_subnets
+                        })
+                else:
+                    network_properties.append(
+                        {
+                            Container.RAREA_NAME_MAPPING_FIELD: routing_area.name,
+                            Container.RAREA_MLTC_MAPPING_FIELD: routing_area.multicast,
+                            Container.RAREA_TYPE_MAPPING_FIELD: routing_area.type
+                        })
+
             if network_properties.__len__() > 0:
                 container.add_property((Container.NETWORK_MAPPING_PROPERTIES, network_properties))
 
