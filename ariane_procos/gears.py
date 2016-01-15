@@ -611,6 +611,7 @@ class DirectoryGear(InjectorGearSkeleton):
         if self.is_network_sync_possible:
             try:
                 if operating_system.last_nics != operating_system.nics:
+                    self.compute_current_possible_network(operating_system)
                     if self.is_network_sync_possible:
                         self.sync_network(operating_system)
                 else:
