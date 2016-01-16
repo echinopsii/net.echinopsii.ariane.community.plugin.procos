@@ -12,6 +12,20 @@
     "ariane_procos": {
         "sleeping_period": 60,
         "log_conf_file_path": "/etc/ariane/aprocos_logging.json",
+        "local_routingarea": {
+            "name": "local",
+            "multicast": "NOLIMIT",
+            "type": "VIRT",
+            "description": "<hostname> local routing area",
+            "subnets": [
+                {
+                    "name": "<hostname> loopback",
+                    "description": "<hostname> loopback subnet",
+                    "subnet_ip": "127.0.0.0",
+                    "subnet_mask": "255.0.0.0"
+                }
+            ]
+        },
         "potential_locations": [
             {
                 "name": "Fake Datacenter",
