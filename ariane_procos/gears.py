@@ -57,7 +57,6 @@ class DirectoryGear(InjectorGearSkeleton):
         if self.running:
             self.running = False
             self.cache(running=self.running)
-        self.cached_gear_actor.remove().get()
 
     def gear_start(self):
         LOGGER.warn('procos_directory_gear@'+SystemGear.hostname+' has been started.')
@@ -651,7 +650,6 @@ class MappingGear(InjectorGearSkeleton):
         if self.running:
             self.running = False
             self.cache(running=self.running)
-        self.cached_gear_actor.remove().get()
 
     def gear_start(self):
         LOGGER.warn('procos_mapping_gear@'+SystemGear.hostname+' has been started.')

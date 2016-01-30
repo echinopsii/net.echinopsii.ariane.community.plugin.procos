@@ -59,7 +59,7 @@ class MapSocket(object):
         self.transport_id = transport_id
 
     def __str__(self):
-        return json.dumps(self.map_socket_2_json())
+        return json.dumps(self.to_json())
 
     def __eq__(self, other):
         if self.family != other.family or self.type != other.type or self.source_ip != other.source_ip\
@@ -125,7 +125,7 @@ class MapSocket(object):
 
         return destination_is_local
 
-    def map_socket_2_json(self):
+    def to_json(self):
         json_obj = {
             'status': self.status,
             'family': self.family,
@@ -149,7 +149,7 @@ class MapSocket(object):
         return json_obj
 
     @staticmethod
-    def json_2_map_socket(json_obj):
+    def from_json(json_obj):
         return MapSocket(
             status=json_obj['status'],
             family=json_obj['family'],
@@ -228,7 +228,7 @@ class Process(object):
         map_sockets_json = []
         if self.map_sockets is not None:
             for map_socket in self.map_sockets:
-                map_sockets_json.append(map_socket.map_socket_2_json())
+                map_sockets_json.append(map_socket.to_json())
         json_obj = {
             'pid': self.pid,
             'name': self.name,
@@ -252,7 +252,7 @@ class Process(object):
         map_sockets = []
         map_sockets_json = json_obj['sockets']
         for connection_json in map_sockets_json:
-            map_sockets.append(MapSocket.json_2_map_socket(connection_json))
+            map_sockets.append(MapSocket.from_json(connection_json))
         return Process(pid=json_obj['pid'], name=json_obj['name'], create_time=json_obj['create_time'],
                        exe=json_obj['exe'], cwd=json_obj['cwd'], cmdline=json_obj['cmdline'],
                        username=json_obj['username'], cpu_affinity=json_obj['cpu_affinity'],
@@ -501,7 +501,6 @@ class OperatingSystem(object):
 
         for pid in psutil.pids():
             try:
-                #pid = 12127
                 psutil_proc = psutil.Process(pid)
                 proc = Process(pid=pid, name=psutil_proc.name(), create_time=psutil_proc.create_time(),
                                exe=psutil_proc.exe(), cwd=psutil_proc.cwd(), cmdline=psutil_proc.cmdline(),
@@ -548,7 +547,7 @@ class OperatingSystem(object):
                                 proc.is_node = last_proc.is_node
                             else:
                                 name = '[' + str(proc.pid) + '] ' + str(proc.name)
-                                LOGGER.debug('process not saved on DB correctly ' + name)
+                                LOGGER.debug('process not saved on DB on previous round: ' + name)
                                 self.new_processs.append(proc)
 
                             proc.last_map_sockets = copy.deepcopy(last_proc.map_sockets)
