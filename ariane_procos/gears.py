@@ -540,7 +540,7 @@ class DirectoryGear(InjectorGearSkeleton):
                 SystemGear.osi.ip_address_ids.remove(ipv4_id)
 
         for nic in operating_system.nics:
-            ip_address=None
+            ip_address = None
             if nic.ipv4_address is not None:
                 if not nic.ipv4_address.startswith('127'):
                     for subnet in SystemGear.subnets:
@@ -604,6 +604,7 @@ class DirectoryGear(InjectorGearSkeleton):
                 self.sync_network(operating_system)
         except Exception as e:
             LOGGER.error(e.__str__())
+            LOGGER.error(traceback.format_exc())
 
     def update_ariane_directories(self, operating_system):
         # check last / new sniff diff on nics
@@ -836,7 +837,7 @@ class MappingGear(InjectorGearSkeleton):
                                 else:
                                     source_url = proto + map_socket.source_ip + ":" + str(map_socket.source_port)
 
-                                destination_is_local = map_socket.is_local_destination(operating_system)
+                                destination_is_local = operating_system.is_local_destination(map_socket)
 
                                 source_endpoint = EndpointService.find_endpoint(
                                     url=source_url

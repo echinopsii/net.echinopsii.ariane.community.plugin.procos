@@ -94,37 +94,6 @@ class MapSocket(object):
                 source_ip = MapSocket.ipv6_2_ipv4(self.source_ip)
         return source_ip, destination_ip
 
-    def is_local_destination(self, operating_system):
-        destination_is_local = False
-
-        if self.destination_ip is not None and self.family == "AF_INET":
-            for nic in operating_system.nics:
-                if NetworkInterfaceCard.ip_is_in_subnet(self.destination_ip,
-                                                        nic.ipv4_subnet_addr, nic.ipv4_subnet_mask):
-                    destination_is_local = True
-                    break
-        elif self.destination_ip is not None and self.family == "AF_INET6":
-            destination_ipv4 = MapSocket.ipv6_2_ipv4(self.destination_ip)
-            if destination_ipv4 != self.destination_ip:
-                for nic in operating_system.nics:
-                    if NetworkInterfaceCard.ip_is_in_subnet(destination_ipv4,
-                                                            nic.ipv4_subnet_addr, nic.ipv4_subnet_mask):
-                        destination_is_local = True
-                        break
-            else:
-                #TODO: check is ipv6 in subnet ?
-                for nic in operating_system.nics:
-                    if nic.ipv6_address is not None and \
-                            self.destination_ip == nic.ipv6_address:
-                        destination_is_local = True
-                        break
-        elif self.family == "AF_UNIX":
-            destination_is_local = True
-
-        LOGGER.debug(str(self.destination_ip) + " is local: " + str(destination_is_local))
-
-        return destination_is_local
-
     def to_json(self):
         json_obj = {
             'status': self.status,
@@ -297,9 +266,9 @@ class NetworkInterfaceCard(object):
             return True
 
     def __str__(self):
-        return json.dumps(self.nic_2_json())
+        return json.dumps(self.to_json())
 
-    def nic_2_json(self):
+    def to_json(self):
         json_obj = {
             'nic_id': self.nic_id,
             'ipv4_id': self.ipv4_id,
@@ -327,7 +296,7 @@ class NetworkInterfaceCard(object):
         return ret
 
     @staticmethod
-    def json_2_nic(json_obj):
+    def from_json(json_obj):
         return NetworkInterfaceCard(nic_id=json_obj['nic_id'], name=json_obj['name'],
                                     mac_address=json_obj['mac_address'], duplex=json_obj['duplex'],
                                     speed=json_obj['speed'], mtu=json_obj['mtu'],
@@ -385,6 +354,37 @@ class OperatingSystem(object):
     def __str__(self):
         return json.dumps(self.operating_system_2_json())
 
+    def is_local_destination(self, mapping_socket):
+        destination_is_local = False
+
+        if mapping_socket.destination_ip is not None and mapping_socket.family == "AF_INET":
+            for nic in self.nics:
+                if NetworkInterfaceCard.ip_is_in_subnet(mapping_socket.destination_ip,
+                                                        nic.ipv4_subnet_addr, nic.ipv4_subnet_mask):
+                    destination_is_local = True
+                    break
+        elif mapping_socket.destination_ip is not None and mapping_socket.family == "AF_INET6":
+            destination_ipv4 = MapSocket.ipv6_2_ipv4(mapping_socket.destination_ip)
+            if destination_ipv4 != mapping_socket.destination_ip:
+                for nic in self.nics:
+                    if NetworkInterfaceCard.ip_is_in_subnet(destination_ipv4,
+                                                            nic.ipv4_subnet_addr, nic.ipv4_subnet_mask):
+                        destination_is_local = True
+                        break
+            else:
+                #TODO: check is ipv6 in subnet ?
+                for nic in self.nics:
+                    if nic.ipv6_address is not None and \
+                       mapping_socket.destination_ip == nic.ipv6_address:
+                        destination_is_local = True
+                        break
+        elif mapping_socket.family == "AF_UNIX":
+            destination_is_local = True
+
+        LOGGER.debug(str(mapping_socket.destination_ip) + " is local: " + str(destination_is_local))
+
+        return destination_is_local
+
     def need_directories_refresh(self):
         if self.last_nics != self.nics:
             return True
@@ -394,10 +394,10 @@ class OperatingSystem(object):
     def operating_system_2_json(self):
         last_nics_json = []
         for nic in self.last_nics:
-            last_nics_json.append(nic.nic_2_json())
+            last_nics_json.append(nic.to_json())
         nics_json = []
         for nic in self.nics:
-            nics_json.append(nic.nic_2_json())
+            nics_json.append(nic.to_json())
         last_processs_json = []
         for process in self.last_processs:
             last_processs_json.append(process.proc_2_json())
@@ -428,12 +428,12 @@ class OperatingSystem(object):
         last_nics_json = json_obj['last_nics']
         last_nics = []
         for last_nic_json in last_nics_json:
-            last_nics.append(NetworkInterfaceCard.json_2_nic(last_nic_json))
+            last_nics.append(NetworkInterfaceCard.from_json(last_nic_json))
 
         nics_json = json_obj['nics']
         nics = []
         for nic_json in nics_json:
-            nics.append(NetworkInterfaceCard.json_2_nic(nic_json))
+            nics.append(NetworkInterfaceCard.from_json(nic_json))
 
         last_processs_json = json_obj['last_processs']
         last_processs = []
