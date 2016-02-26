@@ -1208,7 +1208,7 @@ class MappingGear(InjectorGearSkeleton):
                         target_endpoint = EndpointService.find_endpoint(eid=map_socket.destination_endpoint_id)
                         if target_endpoint is not None:
                             array_link = LinkService.find_link(tep_id=target_endpoint.id)
-                            if array_link.__len__() == 0:
+                            if array_link is not None and array_link.__len__() == 0:
                                 LOGGER.debug('Remove target endpoint ' + str(map_socket.destination_endpoint_id))
                                 target_endpoint.remove()
                                 if map_socket.destination_endpoint_id in operating_system.duplex_links_endpoints:
