@@ -3,7 +3,7 @@
     "version": "master.SNAPSHOT",
     "type": "community",
     "distribs": [
-        "master.SNAPSHOT"
+        "0.1.1"
     ],
     "hook": {
         "package": "plugins.procos",
