@@ -480,8 +480,14 @@ class OperatingSystem(object):
                             nic.mac_address = snic.address
                         elif snic.family == socket.AddressFamily.AF_INET:
                             nic.ipv4_address = snic.address
-                            nic.ipv4_subnet_addr = \
-                                str(ip_network(snic.address + '/' + snic.netmask, strict=False).network_address)
+                            if snic.address is not None and snic.netmask is not None:
+                                ntw_addr = ip_network(str(snic.address) + '/' + str(snic.netmask), strict=False).network_address
+                            else:
+                                ntw_addr = None
+                            if ntw_addr is not None:
+                                nic.ipv4_subnet_addr = str(ntw_addr)
+                            else:
+                                nic.ipv4_subnet_addr = None
                             nic.ipv4_subnet_mask = snic.netmask
                             nic.ipv4_broadcast = snic.broadcast
                             try:

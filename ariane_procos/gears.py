@@ -173,14 +173,25 @@ class DirectoryGear(InjectorGearSkeleton):
                 operating_system.osi_id = None
 
         if SystemGear.osi is None:
-            SystemGear.osi = OSInstanceService.find_os_instance(osi_name=SystemGear.hostname)
+            if SystemGear.hostname.split(".").__len__() > 1:
+                SystemGear.osi = OSInstanceService.find_os_instance(osi_name=SystemGear.hostname.split(".")[0])
+                if SystemGear.osi is None:
+                    SystemGear.osi = OSInstance(
+                        name=SystemGear.hostname.split(".")[0],
+                        description=SystemGear.config.system_context.description,
+                        admin_gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.hostname)
+                    SystemGear.osi.save()
+                operating_system.osi_id = SystemGear.osi.id
+
             if SystemGear.osi is None:
-                SystemGear.osi = OSInstance(
-                    name=SystemGear.hostname,
-                    description=SystemGear.config.system_context.description,
-                    admin_gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.hostname)
-                SystemGear.osi.save()
-            operating_system.osi_id = SystemGear.osi.id
+                SystemGear.osi = OSInstanceService.find_os_instance(osi_name=SystemGear.hostname)
+                if SystemGear.osi is None:
+                    SystemGear.osi = OSInstance(
+                        name=SystemGear.hostname,
+                        description=SystemGear.config.system_context.description,
+                        admin_gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.hostname)
+                    SystemGear.osi.save()
+                operating_system.osi_id = SystemGear.osi.id
 
         #CLEAN NICs
         for nic_id in SystemGear.osi.niCard_ids:
@@ -956,44 +967,58 @@ class MappingGear(InjectorGearSkeleton):
                                     target_endpoint = None
 
                                     if target_fqdn != "localhost" and target_fqdn is not None:
-                                        target_ipa = IPAddressService.find_ip_address(ipa_fqdn=target_fqdn)
-                                        if target_ipa is not None:
+                                        target_os_instance = None
+                                        if target_fqdn.split(".").__len__() > 1:
                                             target_os_instance = OSInstanceService.find_os_instance(
-                                                osi_id=target_ipa.ipa_os_instance_id
+                                                osi_name=target_fqdn.split(".")[0]
                                             )
-                                            if target_os_instance is not None:
-                                                if target_container is None:
-                                                    target_container = ContainerService.find_container(
-                                                        primary_admin_gate_url=target_os_instance.admin_gate_uri
-                                                    )
-                                                if target_container is None:
-                                                    target_os_instance_type = OSTypeService.find_ostype(
-                                                        ost_id=target_os_instance.ost_id
-                                                    )
-                                                    product = target_os_instance_type.name + " - " + \
-                                                        target_os_instance_type.architecture \
-                                                        if target_os_instance_type is not None else\
-                                                        "Unknown OS Type"
 
-                                                    target_os_instance_type_cmp = CompanyService.find_company(
-                                                        cmp_id=target_os_instance_type.company_id
-                                                    ) if target_os_instance_type is not None else None
-                                                    company = target_os_instance_type_cmp.name\
-                                                        if target_os_instance_type_cmp is not None else\
-                                                            "Unknown OS Type Company"
+                                        if target_os_instance is None:
+                                            target_os_instance = OSInstanceService.find_os_instance(
+                                                osi_name=target_fqdn
+                                            )
 
-                                                    name = target_fqdn if target_fqdn is not None else\
-                                                        map_socket.destination_ip
+                                        if target_os_instance is None:
+                                            target_ipa = IPAddressService.find_ip_address(ipa_fqdn=target_fqdn)
+                                            if target_ipa is not None:
+                                                target_os_instance = OSInstanceService.find_os_instance(
+                                                    osi_id=target_ipa.ipa_os_instance_id
+                                                )
 
-                                                    target_container = Container(
-                                                        name=name,
-                                                        gate_uri=target_os_instance.admin_gate_uri,
-                                                        primary_admin_gate_name=target_fqdn + " Primary Admin Gate",
-                                                        company=company,
-                                                        product=product,
-                                                        c_type="Operating System"
-                                                    )
-                                                    target_container.save()
+                                        if target_os_instance is not None:
+                                            if target_container is None:
+                                                target_container = ContainerService.find_container(
+                                                    primary_admin_gate_url=target_os_instance.admin_gate_uri
+                                                )
+                                            if target_container is None:
+                                                target_os_instance_type = OSTypeService.find_ostype(
+                                                    ost_id=target_os_instance.ost_id
+                                                )
+                                                product = target_os_instance_type.name + " - " + \
+                                                    target_os_instance_type.architecture \
+                                                    if target_os_instance_type is not None else\
+                                                    "Unknown OS Type"
+
+                                                target_os_instance_type_cmp = CompanyService.find_company(
+                                                    cmp_id=target_os_instance_type.company_id
+                                                ) if target_os_instance_type is not None else None
+                                                company = target_os_instance_type_cmp.name\
+                                                    if target_os_instance_type_cmp is not None else\
+                                                        "Unknown OS Type Company"
+
+                                                name = target_fqdn if target_fqdn is not None else\
+                                                    map_socket.destination_ip
+
+                                                target_container = Container(
+                                                    name=name,
+                                                    gate_uri=target_os_instance.admin_gate_uri,
+                                                    primary_admin_gate_name=target_fqdn + " Primary Admin Gate",
+                                                    company=company,
+                                                    product=product,
+                                                    c_type="Operating System"
+                                                )
+                                                target_container.save()
+
                                             MappingGear.sync_remote_container_network(target_os_instance,
                                                                                       target_container)
                                             MappingGear.sync_remote_container_team(target_os_instance,
