@@ -205,7 +205,7 @@ class DirectoryGear(InjectorGearSkeleton):
             return
 
         # Sync OS Type
-        if operating_system.ost_id != 0:
+        if operating_system.ost_id != None and operating_system.ost_id != 0:
             SystemGear.ost = OSTypeService.find_ostype(ost_id=operating_system.ost_id)
             if SystemGear.ost is not None and SystemGear.osi.ost_id != SystemGear.ost.id:
                 SystemGear.ost = None
@@ -214,21 +214,30 @@ class DirectoryGear(InjectorGearSkeleton):
                 SystemGear.osi.save()
 
         if SystemGear.ost is None:
-            SystemGear.ost_company = Company(
-                name=SystemGear.config.system_context.os_type.company.name,
-                description=SystemGear.config.system_context.os_type.company.description
+            SystemGear.ost_company = CompanyService.find_company(
+                cmp_name=SystemGear.config.system_context.os_type.company.name
             )
-            SystemGear.ost_company.save()
+            if SystemGear.ost_company is None:
+                SystemGear.ost_company = Company(
+                    name=SystemGear.config.system_context.os_type.company.name,
+                    description=SystemGear.config.system_context.os_type.company.description
+                )
+                SystemGear.ost_company.save()
 
-            SystemGear.ost = OSType(
-                name=SystemGear.config.system_context.os_type.name,
-                architecture=SystemGear.config.system_context.os_type.architecture,
-                os_type_company_id=SystemGear.ost_company.id
-            )
-            SystemGear.ost.save()
-            SystemGear.osi.ost_id = SystemGear.ost.id
-            SystemGear.osi.save()
-            operating_system.ost_id = SystemGear.ost.id
+            SystemGear.ost = OSTypeService.find_ostype(ost_name=SystemGear.config.system_context.os_type.name,
+                                                       ost_arch=SystemGear.config.system_context.os_type.architecture)
+            if SystemGear.ost is None:
+                SystemGear.ost = OSType(
+                    name=SystemGear.config.system_context.os_type.name,
+                    architecture=SystemGear.config.system_context.os_type.architecture,
+                    os_type_company_id=SystemGear.ost_company.id
+                )
+                SystemGear.ost.save()
+
+            if SystemGear.osi.ost_id != SystemGear.ost.id:
+                SystemGear.osi.ost_id = SystemGear.ost.id
+                SystemGear.osi.save()
+                operating_system.ost_id = SystemGear.ost.id
 
     @staticmethod
     def sync_environment(operating_system):
