@@ -114,6 +114,7 @@ class DirectoryGear(InjectorGearSkeleton):
                                             current_possible_routing_area_config.append(routing_area_config)
                                             current_possible_subnet_config.append(subnet_config)
                                         nic_is_located = True
+                                        SystemGear.fqdn = socket.gethostbyaddr(nic.ipv4_address)[0]
                                         break
                                 if nic_is_located:
                                     break
@@ -152,6 +153,12 @@ class DirectoryGear(InjectorGearSkeleton):
         if current_possible_subnet_config.__len__() == 0:
             self.is_network_sync_possible = False
 
+        if self.is_network_sync_possible:
+            LOGGER.debug("FQDN : " + str(SystemGear.fqdn))
+            if SystemGear.hostname != SystemGear.fqdn:
+                SystemGear.osi.admin_gate_uri = SystemGear.config.system_context.admin_gate_protocol+SystemGear.fqdn
+                SystemGear.osi.save()
+
         self.current_possible_network = [
             current_possible_location_config,
             current_possible_routing_area_config,
@@ -168,7 +175,11 @@ class DirectoryGear(InjectorGearSkeleton):
         # Sync Operating System
         if operating_system.osi_id is not None:
             SystemGear.osi = OSInstanceService.find_os_instance(osi_id=operating_system.osi_id)
-            if SystemGear.osi.name != SystemGear.hostname:
+            if SystemGear.hostname.split(".").__len__() > 1 and\
+               SystemGear.osi.name != SystemGear.hostname.split(".")[0]:
+                SystemGear.osi = None
+                operating_system.osi_id = None
+            elif SystemGear.osi.name != SystemGear.hostname:
                 SystemGear.osi = None
                 operating_system.osi_id = None
 
@@ -748,9 +759,10 @@ class MappingGear(InjectorGearSkeleton):
                 operating_system.container_id = None
 
         if self.osi_container is None:
+            LOGGER.debbug("sync_container -FQDN: " + SystemGear.fqdn)
             self.osi_container = Container(
                 name=SystemGear.hostname,
-                gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.hostname,
+                gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.fqdn,
                 primary_admin_gate_name=SystemGear.config.system_context.admin_gate_protocol + ' daemon',
                 company=SystemGear.config.system_context.os_type.company.name,
                 product=SystemGear.config.system_context.os_type.name + ' - ' +
@@ -1335,6 +1347,7 @@ class SystemGear(InjectorGearSkeleton):
     #static reference on commons var
     config = None
     hostname = None
+    fqdn = None
 
     #static reference to up to date ariane directories objects linked to this System
     location = None
