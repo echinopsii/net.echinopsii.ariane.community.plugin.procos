@@ -759,7 +759,7 @@ class MappingGear(InjectorGearSkeleton):
                 operating_system.container_id = None
 
         if self.osi_container is None:
-            LOGGER.debbug("sync_container -FQDN: " + SystemGear.fqdn)
+            LOGGER.debug("sync_container - FQDN: " + SystemGear.fqdn)
             self.osi_container = Container(
                 name=SystemGear.hostname,
                 gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.fqdn,
