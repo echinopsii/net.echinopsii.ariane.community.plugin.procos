@@ -114,7 +114,9 @@ class DirectoryGear(InjectorGearSkeleton):
                                             current_possible_routing_area_config.append(routing_area_config)
                                             current_possible_subnet_config.append(subnet_config)
                                         nic_is_located = True
-                                        SystemGear.fqdn = socket.gethostbyaddr(nic.ipv4_address)[0]
+                                        current_fqdn = socket.gethostbyaddr(nic.ipv4_address)[0]
+                                        if current_fqdn is not None:
+                                            SystemGear.fqdn = current_fqdn
                                         break
                                 if nic_is_located:
                                     break
@@ -154,10 +156,14 @@ class DirectoryGear(InjectorGearSkeleton):
             self.is_network_sync_possible = False
 
         if self.is_network_sync_possible:
-            LOGGER.debug("FQDN : " + str(SystemGear.fqdn))
-            if SystemGear.hostname != SystemGear.fqdn:
+            if SystemGear.hostname != SystemGear.fqdn and SystemGear.fqdn is not None:
                 SystemGear.osi.admin_gate_uri = SystemGear.config.system_context.admin_gate_protocol+SystemGear.fqdn
                 SystemGear.osi.save()
+
+        if SystemGear.fqdn is None:
+            SystemGear.fqdn = SystemGear.hostname
+
+        LOGGER.debug(str(SystemGear.fqdn))
 
         self.current_possible_network = [
             current_possible_location_config,
@@ -759,7 +765,6 @@ class MappingGear(InjectorGearSkeleton):
                 operating_system.container_id = None
 
         if self.osi_container is None:
-            LOGGER.debug("sync_container - FQDN: " + SystemGear.fqdn)
             self.osi_container = Container(
                 name=SystemGear.hostname,
                 gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.fqdn,
@@ -771,7 +776,7 @@ class MappingGear(InjectorGearSkeleton):
             )
             self.osi_container.save()
             operating_system.container_id = self.osi_container.id
-            LOGGER.debug('operating_system.container_id : (' + SystemGear.hostname + ',' +
+            LOGGER.debug('operating_system.container_id : (' + str(SystemGear.hostname) + ',' +
                          str(operating_system.container_id) + ')')
         self.sync_container_properties()
 
