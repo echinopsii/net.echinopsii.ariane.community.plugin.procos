@@ -163,7 +163,7 @@ class DirectoryGear(InjectorGearSkeleton):
         if SystemGear.fqdn is None:
             SystemGear.fqdn = SystemGear.hostname
 
-        LOGGER.debug(str(SystemGear.fqdn))
+        LOGGER.info(str(SystemGear.fqdn))
 
         self.current_possible_network = [
             current_possible_location_config,
@@ -765,6 +765,9 @@ class MappingGear(InjectorGearSkeleton):
                 operating_system.container_id = None
 
         if self.osi_container is None:
+            LOGGER.info(str(SystemGear.fqdn))
+            if SystemGear.fqdn is None:
+                SystemGear.fqdn = SystemGear.hostname
             self.osi_container = Container(
                 name=SystemGear.hostname,
                 gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.fqdn,
