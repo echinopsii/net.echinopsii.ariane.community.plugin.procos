@@ -30,6 +30,7 @@ from ariane_clip3.injector import InjectorGearSkeleton
 from ariane_procos.components import SystemComponent
 from ariane_procos.config import RoutingAreaConfig, SubnetConfig
 from ariane_procos.system import NetworkInterfaceCard, MapSocket
+from ariane_clip3.domino import DominoActivator
 
 __author__ = 'mffrench'
 
@@ -640,6 +641,7 @@ class DirectoryGear(InjectorGearSkeleton):
             self.compute_current_possible_network(operating_system)
             if self.is_network_sync_possible:
                 self.sync_network(operating_system)
+            SystemGear.domino_activator.activate(SystemGear.domino_directory_topic)
         except Exception as e:
             LOGGER.error(e.__str__())
             LOGGER.error(traceback.format_exc())
@@ -665,6 +667,7 @@ class DirectoryGear(InjectorGearSkeleton):
             operating_system = component.operating_system.get()
             self.update_ariane_directories(operating_system)
             self.update_count += 1
+            SystemGear.domino_activator.activate(SystemGear.domino_directory_topic)
         else:
             LOGGER.warn("Synchronization requested but procos_directory_gear@"+SystemGear.hostname+" is not running.")
 
@@ -1347,6 +1350,7 @@ class MappingGear(InjectorGearSkeleton):
                 LOGGER.error(e.__str__())
                 LOGGER.error(traceback.format_exc())
             self.update_count += 1
+            SystemGear.domino_activator.activate(SystemGear.domino_mapping_topic)
         else:
             LOGGER.warn('Synchronization requested but procos_mapping_gear@'+SystemGear.hostname+' is not running.')
 
@@ -1367,6 +1371,11 @@ class SystemGear(InjectorGearSkeleton):
     team = None
     environment = None
 
+    domino_component_topic = "domino_component"
+    domino_directory_topic = "domino_directory"
+    domino_mapping_topic = "domino_mapping"
+    domino_activator = None
+
     def __init__(self, config):
         SystemGear.hostname = socket.gethostname()
         SystemGear.config = config
@@ -1382,11 +1391,14 @@ class SystemGear(InjectorGearSkeleton):
         self.service_name = 'system_procos@'+str(SystemGear.hostname)+' gear'
         component_type = SystemGear.config.system_context.os_type.name + " - " + \
             SystemGear.config.system_context.os_type.architecture
+        SystemGear.domino_activator = DominoActivator({'type': 'Z0MQ'})
         self.component = SystemComponent.start(
             attached_gear_id=self.gear_id(),
             hostname=SystemGear.hostname,
             component_type=component_type,
-            system_gear_actor_ref=self.actor_ref
+            system_gear_actor_ref=self.actor_ref,
+            domino_activator=SystemGear.domino_activator,
+            domino_topic=SystemGear.domino_component_topic
         ).proxy()
         self.directory_gear = DirectoryGear.start().proxy()
         self.mapping_gear = MappingGear.start().proxy()

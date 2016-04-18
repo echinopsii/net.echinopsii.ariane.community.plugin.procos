@@ -30,8 +30,10 @@ LOGGER = logging.getLogger(__name__)
 
 class SystemComponent(InjectorComponentSkeleton):
     def __init__(self, attached_gear_id=None, hostname=socket.gethostname(),
-                 component_type=None, system_gear_actor_ref=None):
+                 component_type=None, system_gear_actor_ref=None, domino_activator=None, domino_topic=None):
         self.hostname = hostname
+        self.domino = domino_activator
+        self.topic = domino_topic
         self.system_gear_actor_ref = system_gear_actor_ref
         super(SystemComponent, self).__init__(
             component_id=
@@ -62,6 +64,7 @@ class SystemComponent(InjectorComponentSkeleton):
             self.operating_system.update()
             self.cache(refreshing=False, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
             self.version += 1
+            self.domino.activate(self.topic)
             if synchronize_with_ariane_dbs and self.system_gear_actor_ref is not None:
                 self.system_gear_actor_ref.proxy().synchronize_with_ariane_dbs()
         except Exception as e:
