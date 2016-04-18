@@ -1439,6 +1439,7 @@ class SystemGear(InjectorGearSkeleton):
             self.directory_gear.stop().get()
             self.mapping_gear.stop().get()
             self.cached_gear_actor.remove().get()
+            SystemGear.domino_activator.stop()
         except Exception as e:
             LOGGER.error(e.__str__())
             LOGGER.error(traceback.format_exc())
