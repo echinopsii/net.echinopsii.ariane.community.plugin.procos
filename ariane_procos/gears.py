@@ -641,7 +641,6 @@ class DirectoryGear(InjectorGearSkeleton):
             self.compute_current_possible_network(operating_system)
             if self.is_network_sync_possible:
                 self.sync_network(operating_system)
-            SystemGear.domino_activator.activate(SystemGear.domino_directory_topic)
         except Exception as e:
             LOGGER.error(e.__str__())
             LOGGER.error(traceback.format_exc())
@@ -667,7 +666,6 @@ class DirectoryGear(InjectorGearSkeleton):
             operating_system = component.operating_system.get()
             self.update_ariane_directories(operating_system)
             self.update_count += 1
-            SystemGear.domino_activator.activate(SystemGear.domino_directory_topic)
         else:
             LOGGER.warn("Synchronization requested but procos_directory_gear@"+SystemGear.hostname+" is not running.")
 
@@ -1350,7 +1348,6 @@ class MappingGear(InjectorGearSkeleton):
                 LOGGER.error(e.__str__())
                 LOGGER.error(traceback.format_exc())
             self.update_count += 1
-            SystemGear.domino_activator.activate(SystemGear.domino_mapping_topic)
         else:
             LOGGER.warn('Synchronization requested but procos_mapping_gear@'+SystemGear.hostname+' is not running.')
 
@@ -1372,8 +1369,7 @@ class SystemGear(InjectorGearSkeleton):
     environment = None
 
     domino_component_topic = "domino_component"
-    domino_directory_topic = "domino_directory"
-    domino_mapping_topic = "domino_mapping"
+    domino_ariane_sync_topic = "domino_ariane_sync"
     domino_activator = None
 
     def __init__(self, config):
@@ -1407,6 +1403,17 @@ class SystemGear(InjectorGearSkeleton):
         LOGGER.info("Synchonize with Ariane DBs...")
         self.directory_gear.synchronize_with_ariane_directories(self.component)
         self.mapping_gear.synchronize_with_ariane_mapping(self.component)
+        SystemGear.domino_activator.activate(SystemGear.domino_ariane_sync_topic)
+
+    def init_with_ariane_dbs(self):
+        LOGGER.warn("Initializing...")
+        self.directory_gear.init_ariane_directories(self.component).get()
+        self.component.sniff(synchronize_with_ariane_dbs=False).get()
+        LOGGER.info("Synchonize with Ariane DBs...")
+        self.directory_gear.synchronize_with_ariane_directories(self.component).get()
+        self.mapping_gear.synchronize_with_ariane_mapping(self.component).get()
+        LOGGER.warn("Initialization done.")
+        SystemGear.domino_activator.activate(SystemGear.domino_ariane_sync_topic)
 
     def run(self):
         if self.sleeping_period is not None and self.sleeping_period > 0:
@@ -1417,13 +1424,7 @@ class SystemGear(InjectorGearSkeleton):
 
     def on_start(self):
         self.cache(running=self.running)
-        LOGGER.warn("Initializing...")
-        self.directory_gear.init_ariane_directories(self.component).get()
-        self.component.sniff(synchronize_with_ariane_dbs=False).get()
-        LOGGER.info("Synchonize with Ariane DBs...")
-        self.directory_gear.synchronize_with_ariane_directories(self.component).get()
-        self.mapping_gear.synchronize_with_ariane_mapping(self.component).get()
-        LOGGER.warn("Initialization done.")
+        self.init_with_ariane_dbs()
         self.running = True
         self.cache(running=self.running)
         self.service = threading.Thread(target=self.run, name=self.service_name)
