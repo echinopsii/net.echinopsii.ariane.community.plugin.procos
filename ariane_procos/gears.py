@@ -965,7 +965,8 @@ class MappingGear(InjectorGearSkeleton):
                                     source_endpoint.add_property(('status', map_socket.status))
                                     source_endpoint.add_property(('file descriptors', map_socket.file_descriptors))
                                     source_endpoint.save()
-                                elif source_endpoint.id not in operating_system.duplex_links_endpoints:
+                                if source_endpoint.id not in operating_system.duplex_links_endpoints \
+                                        and destination_is_local:
                                     operating_system.duplex_links_endpoints.append(source_endpoint.id)
 
                                 map_socket.source_endpoint_id = source_endpoint.id
@@ -1190,7 +1191,9 @@ class MappingGear(InjectorGearSkeleton):
                                                             target_endpoint.add_property(('file descriptors',
                                                                                           srv_socket.file_descriptors))
                                                             target_endpoint.save()
-                                                        elif target_endpoint.id not in operating_system.duplex_links_endpoints:
+                                                        if target_endpoint.id \
+                                                                not in operating_system.duplex_links_endpoints and \
+                                                                destination_is_local:
                                                             operating_system.duplex_links_endpoints.append(target_endpoint.id)
                                                     break
 
@@ -1255,10 +1258,12 @@ class MappingGear(InjectorGearSkeleton):
                     elif map_socket.source_endpoint_id is not None and \
                             map_socket.source_endpoint_id in operating_system.wip_delete_duplex_links_endpoints:
                         operating_system.wip_delete_duplex_links_endpoints.remove(map_socket.source_endpoint_id)
+                        operating_system.duplex_links_endpoints.remove(map_socket.source_endpoint_id)
 
                     if map_socket.destination_endpoint_id is not None and \
                             (
-                                map_socket.destination_endpoint_id not in operating_system.wip_delete_duplex_links_endpoints or
+                                map_socket.destination_endpoint_id not in
+                                operating_system.wip_delete_duplex_links_endpoints or
                                 map_socket.destination_endpoint_id not in operating_system.duplex_links_endpoints
                             ):
                         target_endpoint = EndpointService.find_endpoint(eid=map_socket.destination_endpoint_id)
@@ -1268,7 +1273,9 @@ class MappingGear(InjectorGearSkeleton):
                                 LOGGER.debug('Remove target endpoint ' + str(map_socket.destination_endpoint_id))
                                 target_endpoint.remove()
                                 if map_socket.destination_endpoint_id in operating_system.duplex_links_endpoints:
-                                    operating_system.wip_delete_duplex_links_endpoints.append(map_socket.destination_endpoint_id)
+                                    operating_system.wip_delete_duplex_links_endpoints.append(
+                                        map_socket.destination_endpoint_id
+                                    )
                         else:
                             LOGGER.warn("Dead socket (target endpoint : " +
                                         str(map_socket.destination_endpoint_id) +
@@ -1276,6 +1283,7 @@ class MappingGear(InjectorGearSkeleton):
                     elif map_socket.destination_endpoint_id is not None and \
                             map_socket.destination_endpoint_id in operating_system.wip_delete_duplex_links_endpoints:
                         operating_system.wip_delete_duplex_links_endpoints.remove(map_socket.destination_endpoint_id)
+                        operating_system.duplex_links_endpoints.remove(map_socket.destination_endpoint_id)
 
         sync_proc_time = round(timeit.default_timer()-t)
         LOGGER.debug('time : {0}'.format(sync_proc_time))
@@ -1406,13 +1414,13 @@ class SystemGear(InjectorGearSkeleton):
         SystemGear.domino_activator.activate(SystemGear.domino_ariane_sync_topic)
 
     def init_with_ariane_dbs(self):
-        LOGGER.warn("Initializing...")
+        LOGGER.info("Initializing...")
         self.directory_gear.init_ariane_directories(self.component).get()
         self.component.sniff(synchronize_with_ariane_dbs=False).get()
         LOGGER.info("Synchonize with Ariane DBs...")
         self.directory_gear.synchronize_with_ariane_directories(self.component).get()
         self.mapping_gear.synchronize_with_ariane_mapping(self.component).get()
-        LOGGER.warn("Initialization done.")
+        LOGGER.info("Initialization done.")
         SystemGear.domino_activator.activate(SystemGear.domino_ariane_sync_topic)
 
     def run(self):
