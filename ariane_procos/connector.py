@@ -83,9 +83,8 @@ class ArianeConnector(object):
 
         if no_error:
             MappingService(rest_args)
-            # Test Mapping Service
+            # Open session and Test Mapping Service
             try:
-                ContainerService.get_containers()
                 SessionService.open_session("ArianeProcOS_" + socket.gethostname())
             except Exception as e:
                 LOGGER.error("Problem while initializing Ariane mapping service.")
