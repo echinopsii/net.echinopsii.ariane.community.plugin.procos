@@ -22,7 +22,7 @@ import time
 import timeit
 import traceback
 from ariane_clip3.mapping import ContainerService, Container, NodeService, Node, Endpoint, EndpointService, Transport, \
-    Link, LinkService
+    Link, LinkService, SessionService
 from ariane_clip3.directory import LocationService, Location, RoutingAreaService, RoutingArea, OSInstanceService,\
     OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team,\
     OSTypeService, OSType, Company, CompanyService, NICardService, NICard
@@ -1352,12 +1352,14 @@ class MappingGear(InjectorGearSkeleton):
                 self.sync_container(operating_system)
                 self.sync_processs(operating_system)
                 self.sync_map_socket(operating_system)
+                SessionService.commit()
+                self.update_count += 1
             except Exception as e:
                 LOGGER.error(e.__str__())
                 LOGGER.error(traceback.format_exc())
-            self.update_count += 1
+                SessionService.rollback()
         else:
-            LOGGER.warn('Synchronization requested but procos_mapping_gear@'+SystemGear.hostname+' is not running.')
+            LOGGER.warn('Synchronization requested but procos_mapping_gear@' + SystemGear.hostname + ' is not running.')
 
 
 class SystemGear(InjectorGearSkeleton):
