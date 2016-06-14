@@ -85,7 +85,8 @@ class ArianeConnector(object):
             MappingService(rest_args)
             # Open session and Test Mapping Service
             try:
-                SessionService.open_session("ArianeProcOS_" + socket.gethostname())
+                SessionService.open_session("ArianeProcOS_test" + socket.gethostname())
+                SessionService.close_session()
             except Exception as e:
                 LOGGER.error("Problem while initializing Ariane mapping service.")
                 LOGGER.error(e.__str__())
@@ -139,5 +140,4 @@ class ArianeConnector(object):
                     InjectorCachedComponentService.get_components_cache_size() == 0:
                 self.injector_ui_procos_entity.remove()
             self.injector_service.stop()
-            SessionService.close_session()
             self.ready = False

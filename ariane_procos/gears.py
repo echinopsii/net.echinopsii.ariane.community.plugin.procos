@@ -1347,6 +1347,7 @@ class MappingGear(InjectorGearSkeleton):
 
     def synchronize_with_ariane_mapping(self, component):
         if self.running:
+            SessionService.open_session("ArianeProcOS" + socket.gethostname())
             operating_system = component.operating_system.get()
             try:
                 self.sync_container(operating_system)
@@ -1358,6 +1359,7 @@ class MappingGear(InjectorGearSkeleton):
                 LOGGER.error(e.__str__())
                 LOGGER.error(traceback.format_exc())
                 SessionService.rollback()
+            SessionService.close_session()
         else:
             LOGGER.warn('Synchronization requested but procos_mapping_gear@' + SystemGear.hostname + ' is not running.')
 
