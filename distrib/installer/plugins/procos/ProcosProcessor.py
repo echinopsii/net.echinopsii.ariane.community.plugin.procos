@@ -15,23 +15,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
-from plugins.procos.dbIDMMySQLPopulator import dbIDMMySQLPopulator
+from plugins.procos.DBProcosIDMMySQLPopulator import DBProcosIDMMySQLPopulator
 
 __author__ = 'mffrench'
 
 
-class procosProcessor:
+class ProcosProcessor:
 
-    def __init__(self, homeDirPath, directoryDBConfig, idmDBConfig, silent):
-        print("\n%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--\n")
+    def __init__(self, home_dir_path, directory_db_config, idm_db_config, silent):
+        print("\n%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--%--"
+              "%--%--%--%--%--%--%--%--%--\n")
         print("%-- Plugin ProcOS configuration : \n")
-        self.homeDirPath = homeDirPath
+        self.homeDirPath = home_dir_path
         self.silent = silent
         if not os.path.exists(self.homeDirPath + "/ariane/cache/core/injector/remote/components/"):
             os.makedirs(self.homeDirPath + "/ariane/cache/core/injector/remote/components/", 0o755)
         if not os.path.exists(self.homeDirPath + "/ariane/cache/core/injector/remote/gears/"):
             os.makedirs(self.homeDirPath + "/ariane/cache/core/injector/remote/gears/", 0o755)
-        self.procosIDMMySQLPopulator = dbIDMMySQLPopulator(idmDBConfig)
+        self.procosIDMMySQLPopulator = DBProcosIDMMySQLPopulator(idm_db_config)
 
     def process(self):
         self.procosIDMMySQLPopulator.process()

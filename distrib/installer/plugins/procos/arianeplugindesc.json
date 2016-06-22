@@ -7,8 +7,8 @@
     ],
     "hook": {
         "package": "plugins.procos",
-        "module": "procosProcessor",
-        "class": "procosProcessor"
+        "module": "ProcosProcessor",
+        "class": "ProcosProcessor"
     },
     "environment": [
         {
