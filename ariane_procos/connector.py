@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
+import os
 import socket
 import traceback
 from ariane_clip3.injector import InjectorService, InjectorUITreeEntity, InjectorUITreeService, \
@@ -39,13 +40,14 @@ class ArianeConnector(object):
             'password': procos_config.rest_password
         }
         client_properties = {
-            'product': 'Ariane Plugin ProcOS',
+            'product': 'Ariane',
             'information': 'Ariane Plugin ProcOS - Map your Operating System Process interaction and more ...',
-            'ariane.pgurl': 'ssh://' + socket.gethostname(),
+            'ariane.pgurl': 'ssh://' + socket.gethostname() + "/$[/usr/local/bin/aprocos {start|stop}]",
             'ariane.osi': socket.gethostname(),
             'ariane.otm': 'AROps',
-            'ariane.app': 'Ariane',
-            'ariane.cmp': 'echinopsii'
+            'ariane.app': 'Ariane Plugin ProcOS',
+            'ariane.cmp': 'echinopsii',
+            'ariane.pid':  os.getpid()
         }
         rbmq_args = {
             'type': 'RBMQ',
