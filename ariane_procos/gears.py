@@ -968,7 +968,8 @@ class MappingGear(InjectorGearSkeleton):
                                             )
 
                                 if source_endpoint is None:
-                                    source_endpoint = Endpoint(url=source_url, parent_node_id=proc.mapping_id)
+                                    source_endpoint = Endpoint(url=source_url, parent_node_id=proc.mapping_id,
+                                                               ignore_sync=True)
                                     source_endpoint.add_property(('type', map_socket.type))
                                     source_endpoint.add_property(('family', map_socket.family))
                                     source_endpoint.add_property(('status', map_socket.status))
@@ -1080,7 +1081,8 @@ class MappingGear(InjectorGearSkeleton):
                                             addr = target_fqdn if target_fqdn is not None else map_socket.destination_ip
                                             target_node = Node(
                                                 name=addr + ':' + str(map_socket.destination_port),
-                                                container_id=target_container.id
+                                                container_id=target_container.id,
+                                                ignore_sync=True
                                             )
                                             target_node.save()
 
@@ -1089,7 +1091,7 @@ class MappingGear(InjectorGearSkeleton):
                                         )
                                         if target_endpoint is None:
                                             target_endpoint = Endpoint(
-                                                url=target_url, parent_node_id=target_node.id
+                                                url=target_url, parent_node_id=target_node.id, ignore_sync=True
                                             )
                                         target_endpoint.save()
                                     else:
@@ -1192,7 +1194,8 @@ class MappingGear(InjectorGearSkeleton):
 
                                                         if target_endpoint is None:
                                                             target_endpoint = Endpoint(
-                                                                url=target_url, parent_node_id=target_node.id
+                                                                url=target_url, parent_node_id=target_node.id,
+                                                                ignore_sync=True
                                                             )
                                                             target_endpoint.add_property(('type', srv_socket.type))
                                                             target_endpoint.add_property(('family', srv_socket.family))
@@ -1203,7 +1206,9 @@ class MappingGear(InjectorGearSkeleton):
                                                         if target_endpoint.id \
                                                                 not in operating_system.duplex_links_endpoints and \
                                                                 destination_is_local:
-                                                            operating_system.duplex_links_endpoints.append(target_endpoint.id)
+                                                            operating_system.duplex_links_endpoints.append(
+                                                                target_endpoint.id
+                                                            )
                                                     break
 
                                     if target_endpoint is not None:
