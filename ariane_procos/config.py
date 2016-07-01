@@ -132,7 +132,6 @@ class LocationConfig(object):
         else:
             return True
 
-
 class Config(object):
     def __init__(self):
         self.rest_base_url = None
@@ -146,6 +145,7 @@ class Config(object):
         self.rbmq_vhost = None
 
         self.sleeping_period = None
+        self.processes_filter = None
         self.log_conf_file_path = None
 
         #List of possible locations this OS instance could be located with routing area and subnets
@@ -214,6 +214,14 @@ class Config(object):
                                                                                  'should be an integer !')
             if 'log_conf_file_path' in config['ariane_procos']:
                 self.log_conf_file_path = config['ariane_procos']['log_conf_file_path']
+
+            if 'processes_name_filter' in config['ariane_procos']:
+                processes = config['ariane_procos']['processes_name_filter']
+                if processes is not None and isinstance(processes, str):
+                    self.processes_filter = []
+                    self.processes_filter.append(processes)
+                elif processes is not None and isinstance(processes, list):
+                    self.processes_filter = processes
 
             if ariane_procos_missing_fields.__len__() == 0:
                 if config['ariane_procos']['local_routingarea'] is not None:

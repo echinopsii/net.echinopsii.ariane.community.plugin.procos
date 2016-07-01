@@ -843,6 +843,15 @@ class MappingGear(InjectorGearSkeleton):
 
         t = timeit.default_timer()
         for proc in operating_system.processs:
+            if SystemGear.config.processes_filter is not None:
+                is_found = False
+                for process_name_filter in SystemGear.config.processes_filter:
+                    if process_name_filter in proc.name:
+                        is_found = True
+                        break
+                if not is_found:
+                    continue
+
             if proc.mapping_id is not None and proc.new_map_sockets is not None:
                 if proc.name != "exe":
                     name = '[' + str(proc.pid) + '] ' + str(proc.name)
@@ -889,7 +898,7 @@ class MappingGear(InjectorGearSkeleton):
                                         other_source_url_possibility = proto + "::1:" + str(map_socket.source_port) + \
                                                                        str(map_socket.file_descriptors)
                                         source_endpoint = EndpointService.find_endpoint(
-                                           url=other_source_url_possibility
+                                            url=other_source_url_possibility
                                         )
                                         if source_endpoint is None:
                                             other_source_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.source_port) + \
@@ -1296,6 +1305,15 @@ class MappingGear(InjectorGearSkeleton):
         t = timeit.default_timer()
         LOGGER.debug(str(operating_system.new_processs.__len__()) + ' new processes found')
         for process in operating_system.new_processs:
+            if SystemGear.config.processes_filter is not None:
+                is_found = False
+                for process_name_filter in SystemGear.config.processes_filter:
+                    if process_name_filter in process.name:
+                        is_found = True
+                        break
+                if not is_found:
+                    continue
+
             if process.name != "exe":
                 name = '[' + str(process.pid) + '] ' + str(process.name)
             else:
@@ -1323,6 +1341,15 @@ class MappingGear(InjectorGearSkeleton):
 
         LOGGER.debug(str(operating_system.dead_processs.__len__()) + ' old processes found')
         for process in operating_system.dead_processs:
+            if SystemGear.config.processes_filter is not None:
+                is_found = False
+                for process_name_filter in SystemGear.config.processes_filter:
+                    if process_name_filter in process.name:
+                        is_found = True
+                        break
+                if not is_found:
+                    continue
+
             process_map_obj = None
             if process.name != "exe":
                 name = '[' + str(process.pid) + '] ' + str(process.name)
@@ -1347,19 +1374,19 @@ class MappingGear(InjectorGearSkeleton):
 
     def synchronize_with_ariane_mapping(self, component):
         if self.running:
-            SessionService.open_session("ArianeProcOS" + socket.gethostname())
+            #SessionService.open_session("ArianeProcOS" + socket.gethostname())
             operating_system = component.operating_system.get()
             try:
                 self.sync_container(operating_system)
                 self.sync_processs(operating_system)
                 self.sync_map_socket(operating_system)
-                SessionService.commit()
+                #SessionService.commit()
                 self.update_count += 1
             except Exception as e:
                 LOGGER.error(e.__str__())
                 LOGGER.error(traceback.format_exc())
-                SessionService.rollback()
-            SessionService.close_session()
+                #SessionService.rollback()
+            #SessionService.close_session()
         else:
             LOGGER.warn('Synchronization requested but procos_mapping_gear@' + SystemGear.hostname + ' is not running.')
 
