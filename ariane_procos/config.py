@@ -18,6 +18,7 @@
 import configparser
 import json
 import os
+from ariane_clip3.driver_factory import DriverFactory
 from ariane_procos import exceptions
 
 __author__ = 'mffrench'
@@ -133,6 +134,7 @@ class LocationConfig(object):
             return True
 
 class Config(object):
+
     def __init__(self):
         self.rest_base_url = None
         self.rest_user = None
@@ -147,6 +149,8 @@ class Config(object):
         self.sleeping_period = None
         self.processes_filter = None
         self.log_conf_file_path = None
+
+        self.mapping_driver_type = DriverFactory.DRIVER_REST
 
         #List of possible locations this OS instance could be located with routing area and subnets
         #(labtop of VM which can move through an hypervisor)
@@ -222,6 +226,11 @@ class Config(object):
                     self.processes_filter.append(processes)
                 elif processes is not None and isinstance(processes, list):
                     self.processes_filter = processes
+
+            if 'mapping_driver' in config['ariane_procos']:
+                mapping_dt = config['ariane_procos']['mapping_driver']
+                if mapping_dt == DriverFactory.DRIVER_RBMQ:
+                    self.mapping_driver_type = DriverFactory.DRIVER_RBMQ
 
             if ariane_procos_missing_fields.__len__() == 0:
                 if config['ariane_procos']['local_routingarea'] is not None:

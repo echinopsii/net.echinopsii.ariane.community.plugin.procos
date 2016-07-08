@@ -18,10 +18,10 @@
 import logging
 import os
 import socket
-import traceback
+from ariane_clip3.driver_factory import DriverFactory
 from ariane_clip3.injector import InjectorService, InjectorUITreeEntity, InjectorUITreeService, \
     InjectorCachedComponentService, InjectorCachedGearService
-from ariane_clip3.mapping import MappingService, ContainerService, SessionService
+from ariane_clip3.mapping import MappingService, SessionService
 from ariane_clip3.directory import DirectoryService, LocationService
 
 __author__ = 'mffrench'
@@ -84,7 +84,10 @@ class ArianeConnector(object):
             no_error = False
 
         if no_error:
-            MappingService(rest_args)
+            if procos_config.mapping_driver_type == DriverFactory.DRIVER_RBMQ:
+                MappingService(rbmq_args)
+            else:
+                MappingService(rest_args)
             # Open session and Test Mapping Service
             try:
                 SessionService.open_session("ArianeProcOS_test" + socket.gethostname())
