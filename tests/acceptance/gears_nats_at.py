@@ -10,7 +10,7 @@ __author__ = 'mffrench'
 class GearsSkeletonTest(unittest.TestCase):
 
     def setUp(self):
-        self.config = Config().parse("valid_config.json")
+        self.config = Config().parse("valid_nats_conf.json")
         self.ariane_connector = ArianeConnector(self.config)
 
     def test_gear_skeleton(self):

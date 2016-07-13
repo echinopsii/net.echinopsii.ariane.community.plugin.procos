@@ -140,6 +140,11 @@ class Config(object):
         self.rest_user = None
         self.rest_password = None
 
+        self.nats_host = None
+        self.nats_port = None
+        self.nats_user = None
+        self.nats_password = None
+
         self.rbmq_host = None
         self.rbmq_port = None
         self.rbmq_user = None
@@ -150,7 +155,8 @@ class Config(object):
         self.processes_filter = None
         self.log_conf_file_path = None
 
-        self.mapping_driver_type = DriverFactory.DRIVER_REST
+        self.injector_driver_type = DriverFactory.DRIVER_RBMQ
+        self.mapping_driver_type = DriverFactory.DRIVER_RBMQ
 
         #List of possible locations this OS instance could be located with routing area and subnets
         #(labtop of VM which can move through an hypervisor)
@@ -180,6 +186,22 @@ class Config(object):
             if self.rest_password is None or not self.rest_password:
                 ariane_server_missing_fields.append('rest_password')
 
+            self.nats_host = config['ariane_server']['nats_host']
+            if self.nats_host is None or not self.nats_host:
+                ariane_server_missing_fields.append('nats_host')
+
+            self.nats_port = config['ariane_server']['nats_port']
+            if self.nats_port is None or not self.nats_port:
+                ariane_server_missing_fields.append('nats_port')
+
+            self.nats_user = config['ariane_server']['nats_user']
+            if self.nats_user is None or not self.nats_user:
+                ariane_server_missing_fields.append('nats_user')
+
+            self.nats_password = config['ariane_server']['nats_password']
+            if self.nats_password is None or not self.nats_password:
+                ariane_server_missing_fields.append('nats_password')
+
             self.rbmq_host = config['ariane_server']['rbmq_host']
             if self.rbmq_host is None or not self.rbmq_host:
                 ariane_server_missing_fields.append('rbmq_host')
@@ -193,7 +215,7 @@ class Config(object):
                 ariane_server_missing_fields.append('rbmq_user')
 
             self.rbmq_password = config['ariane_server']['rbmq_password']
-            if self.rbmq_password is None or not self.rest_password:
+            if self.rbmq_password is None or not self.rbmq_password:
                 ariane_server_missing_fields.append('rbmq_password')
 
             self.rbmq_vhost = config['ariane_server']['rbmq_vhost']
@@ -227,10 +249,17 @@ class Config(object):
                 elif processes is not None and isinstance(processes, list):
                     self.processes_filter = processes
 
+            if 'injector_driver' in config['ariane_procos']:
+                injector_dt = config['ariane_procos']['injector_driver']
+                if injector_dt == DriverFactory.DRIVER_NATS:
+                    self.injector_driver_type = DriverFactory.DRIVER_NATS
+
             if 'mapping_driver' in config['ariane_procos']:
                 mapping_dt = config['ariane_procos']['mapping_driver']
-                if mapping_dt == DriverFactory.DRIVER_RBMQ:
-                    self.mapping_driver_type = DriverFactory.DRIVER_RBMQ
+                if mapping_dt == DriverFactory.DRIVER_REST:
+                    self.mapping_driver_type = DriverFactory.DRIVER_REST
+                elif mapping_dt == DriverFactory.DRIVER_NATS:
+                    self.mapping_driver_type = DriverFactory.DRIVER_NATS
 
             if ariane_procos_missing_fields.__len__() == 0:
                 if config['ariane_procos']['local_routingarea'] is not None:

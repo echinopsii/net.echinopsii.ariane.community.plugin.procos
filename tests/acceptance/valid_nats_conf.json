@@ -16,6 +16,8 @@
     "ariane_procos": {
         "sleeping_period": 20,
         "log_conf_file_path": "",
+        "injector_driver": "NATS",
+        "mapping_driver": "NATS",
         "local_routingarea": {
             "name": "dekatonmac.local",
             "multicast": "NOLIMIT",
