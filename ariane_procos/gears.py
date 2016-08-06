@@ -25,7 +25,7 @@ from ariane_clip3.mapping import ContainerService, Container, NodeService, Node,
     Link, LinkService, SessionService
 from ariane_clip3.directory import LocationService, Location, RoutingAreaService, RoutingArea, OSInstanceService,\
     OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team,\
-    OSTypeService, OSType, Company, CompanyService, NICardService, NICard
+    OSTypeService, OSType, Company, CompanyService, NICService, NIC
 from ariane_clip3.injector import InjectorGearSkeleton
 from ariane_procos.components import SystemComponent
 from ariane_procos.config import RoutingAreaConfig, SubnetConfig
@@ -213,7 +213,7 @@ class DirectoryGear(InjectorGearSkeleton):
 
         #CLEAN NICs
         for nic_id in SystemGear.osi.niCard_ids:
-            nic = NICardService.find_nicard(nic_id=nic_id)
+            nic = NICService.find_nic(nic_id=nic_id)
             nic.remove()
 
     @staticmethod
@@ -613,9 +613,9 @@ class DirectoryGear(InjectorGearSkeleton):
             else:
                 nicmcaddr = nic.mac_address
             if nicmcaddr is not None and nicmcaddr:
-                nic2save = NICardService.find_nicard(nic_mac_address=nicmcaddr)
+                nic2save = NICService.find_nic(nic_mac_address=nicmcaddr)
                 if nic2save is None:
-                   nic2save = NICard(
+                   nic2save = NIC(
                        name=SystemGear.hostname+"."+nic.name,
                        mac_address=nicmcaddr,
                        duplex=nic.duplex,
