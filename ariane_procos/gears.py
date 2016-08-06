@@ -213,7 +213,7 @@ class DirectoryGear(InjectorGearSkeleton):
 
         #CLEAN NICs
         for nic_id in SystemGear.osi.niCard_ids:
-            nic = NICardService.find_niCard(nic_id=nic_id)
+            nic = NICardService.find_nicard(nic_id=nic_id)
             nic.remove()
 
     @staticmethod
@@ -373,7 +373,7 @@ class DirectoryGear(InjectorGearSkeleton):
             if SystemGear.location is None:
                 SystemGear.location = Location(name=current_location.name,
                                                description=current_location.description,
-                                               type=current_location.type,
+                                               dc_type=current_location.type,
                                                address=current_location.address,
                                                zip_code=current_location.zipcode,
                                                town=current_location.town,
@@ -613,11 +613,11 @@ class DirectoryGear(InjectorGearSkeleton):
             else:
                 nicmcaddr = nic.mac_address
             if nicmcaddr is not None and nicmcaddr:
-                nic2save = NICardService.find_niCard(nic_mac_Address=nicmcaddr)
+                nic2save = NICardService.find_nicard(nic_mac_address=nicmcaddr)
                 if nic2save is None:
                    nic2save = NICard(
                        name=SystemGear.hostname+"."+nic.name,
-                       macAddress=nicmcaddr,
+                       mac_address=nicmcaddr,
                        duplex=nic.duplex,
                        speed=nic.speed,
                        mtu=nic.mtu,
