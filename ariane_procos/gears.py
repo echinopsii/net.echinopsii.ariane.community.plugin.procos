@@ -212,7 +212,7 @@ class DirectoryGear(InjectorGearSkeleton):
                 operating_system.osi_id = SystemGear.osi.id
 
         #CLEAN NICs
-        for nic_id in SystemGear.osi.niCard_ids:
+        for nic_id in SystemGear.osi.nic_ids:
             nic = NICService.find_nic(nic_id=nic_id)
             nic.remove()
 
