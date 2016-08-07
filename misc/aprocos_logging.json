@@ -47,6 +47,11 @@
     },
 
     "loggers": {
+        "ariane_clip3": {
+            "level": "WARN",
+            "handlers": ["debug_file_handler","info_file_handler","error_file_handler"],
+            "propagate": "no"
+        },
         "ariane_procos": {
             "level": "INFO",
             "handlers": ["debug_file_handler","info_file_handler","error_file_handler"],
