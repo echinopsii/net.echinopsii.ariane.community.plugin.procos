@@ -155,8 +155,8 @@ class Config(object):
         self.processes_filter = None
         self.log_conf_file_path = None
 
-        self.injector_driver_type = DriverFactory.DRIVER_RBMQ
-        self.mapping_driver_type = DriverFactory.DRIVER_RBMQ
+        self.injector_driver_type = DriverFactory.DRIVER_NATS
+        self.mapping_driver_type = DriverFactory.DRIVER_NATS
 
         #List of possible locations this OS instance could be located with routing area and subnets
         #(labtop of VM which can move through an hypervisor)
@@ -251,15 +251,15 @@ class Config(object):
 
             if 'injector_driver' in config['ariane_procos']:
                 injector_dt = config['ariane_procos']['injector_driver']
-                if injector_dt == DriverFactory.DRIVER_NATS:
-                    self.injector_driver_type = DriverFactory.DRIVER_NATS
+                if injector_dt == DriverFactory.DRIVER_RBMQ:
+                    self.injector_driver_type = DriverFactory.DRIVER_RBMQ
 
             if 'mapping_driver' in config['ariane_procos']:
                 mapping_dt = config['ariane_procos']['mapping_driver']
                 if mapping_dt == DriverFactory.DRIVER_REST:
                     self.mapping_driver_type = DriverFactory.DRIVER_REST
-                elif mapping_dt == DriverFactory.DRIVER_NATS:
-                    self.mapping_driver_type = DriverFactory.DRIVER_NATS
+                elif mapping_dt == DriverFactory.DRIVER_RBMQ:
+                    self.mapping_driver_type = DriverFactory.DRIVER_RBMQ
 
             if ariane_procos_missing_fields.__len__() == 0:
                 if config['ariane_procos']['local_routingarea'] is not None:
