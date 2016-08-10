@@ -15,7 +15,7 @@ case "$1" in
             exit
         fi
         echo "Starting Ariane ProcOS"
-        nohup python3 -m ariane_procos > /var/log/ariane/aprocos_nohup.log 2>&1 &
+        exec -a ariane-plg.procos python3 -m ariane_procos > /var/log/ariane/aprocos_nohup.log 2>&1 &
         ;;
     stop)
         stopped=`ps -aef | grep 'ariane_procos' | grep -v grep | awk '{print $2}' | wc -l`
