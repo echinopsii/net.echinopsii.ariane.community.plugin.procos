@@ -854,9 +854,17 @@ class MappingGear(InjectorGearSkeleton):
 
             if proc.mapping_id is not None and proc.new_map_sockets is not None:
                 if proc.name != "exe":
-                    name = '[' + str(proc.pid) + '] ' + str(proc.name)
+                    if "java" in proc.name or "python" in proc.name:
+                        if "java" in proc.name and "java" not in proc.cmdline[0]:
+                            name = '[' + str(proc.pid) + '] ' + str(proc.cmdline[0])
+                        elif "python" in proc.name and "python" not in proc.cmdline[0]:
+                            name = '[' + str(proc.pid) + '] ' + str(proc.cmdline[0])
+                        else:
+                            name = '[' + str(proc.pid) + '] ' + str(proc.name)
+                    else:
+                        name = '[' + str(proc.pid) + '] ' + str(proc.name)
                 else:
-                    name = '[' + str(proc.pid) + '] ' + str(proc.name) + ' - ' + proc.cmdline[0]
+                    name = '[' + str(proc.pid) + '] ' + str(proc.name) + ' - ' + str(proc.cmdline[0])
                 LOGGER.debug(str(proc.new_map_sockets.__len__()) + ' new socket found for process ' + name)
                 for map_socket in proc.new_map_sockets:
                     if map_socket.source_ip is not None and map_socket.source_port is not None:
@@ -1242,9 +1250,17 @@ class MappingGear(InjectorGearSkeleton):
 
             if proc.mapping_id is not None and proc.dead_map_sockets is not None:
                 if proc.name != "exe":
-                    name = '[' + str(proc.pid) + '] ' + str(proc.name)
+                    if "java" in proc.name or "python" in proc.name:
+                        if "java" in proc.name and "java" not in proc.cmdline[0]:
+                            name = '[' + str(proc.pid) + '] ' + str(proc.cmdline[0])
+                        elif "python" in proc.name and "python" not in proc.cmdline[0]:
+                            name = '[' + str(proc.pid) + '] ' + str(proc.cmdline[0])
+                        else:
+                            name = '[' + str(proc.pid) + '] ' + str(proc.name)
+                    else:
+                        name = '[' + str(proc.pid) + '] ' + str(proc.name)
                 else:
-                    name = '[' + str(proc.pid) + '] ' + str(proc.name) + ' - ' + proc.cmdline[0]
+                    name = '[' + str(proc.pid) + '] ' + str(proc.name) + ' - ' + str(proc.cmdline[0])
                 LOGGER.debug(str(proc.dead_map_sockets.__len__()) + ' dead socket found for process ['
                              + str(proc.mapping_id) + ']' + name)
                 for map_socket in proc.dead_map_sockets:
@@ -1320,9 +1336,17 @@ class MappingGear(InjectorGearSkeleton):
                     continue
 
             if process.name != "exe":
-                name = '[' + str(process.pid) + '] ' + str(process.name)
+                if "java" in process.name or "python" in process.name:
+                    if "java" in process.name and "java" not in process.cmdline[0]:
+                        name = '[' + str(process.pid) + '] ' + str(process.cmdline[0])
+                    elif "python" in process.name and "python" not in process.cmdline[0]:
+                        name = '[' + str(process.pid) + '] ' + str(process.cmdline[0])
+                    else:
+                        name = '[' + str(process.pid) + '] ' + str(process.name)
+                else:
+                    name = '[' + str(process.pid) + '] ' + str(process.name)
             else:
-                name = '[' + str(process.pid) + '] ' + str(process.name) + ' - ' + process.cmdline[0]
+                name = '[' + str(process.pid) + '] ' + str(process.name) + ' - ' + str(process.cmdline[0])
 
             process_map_obj = Node(
                 name=name,
@@ -1362,9 +1386,17 @@ class MappingGear(InjectorGearSkeleton):
 
             process_map_obj = None
             if process.name != "exe":
-                name = '[' + str(process.pid) + '] ' + str(process.name)
+                if "java" in process.name or "python" in process.name:
+                    if "java" in process.name and "java" not in process.cmdline[0]:
+                        name = '[' + str(process.pid) + '] ' + str(process.cmdline[0])
+                    elif "python" in process.name and "python" not in process.cmdline[0]:
+                        name = '[' + str(process.pid) + '] ' + str(process.cmdline[0])
+                    else:
+                        name = '[' + str(process.pid) + '] ' + str(process.name)
+                else:
+                    name = '[' + str(process.pid) + '] ' + str(process.name)
             else:
-                name = '[' + str(process.pid) + '] ' + str(process.name) + ' - ' + process.cmdline[0]
+                name = '[' + str(process.pid) + '] ' + str(process.name) + ' - ' + str(process.cmdline[0])
 
             if process.mapping_id is None:
                 LOGGER.error('dead process (' + name + ') has not been saved on mapping db !')
