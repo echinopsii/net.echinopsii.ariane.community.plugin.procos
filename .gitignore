@@ -7,3 +7,4 @@ tests/unit/__pycache__/
 ariane_procos.egg-info/
 dist/
 target/
+*.iml
