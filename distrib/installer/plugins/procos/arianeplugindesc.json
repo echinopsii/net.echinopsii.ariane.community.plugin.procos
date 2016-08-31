@@ -1,9 +1,9 @@
 {
     "id": "ariane.community.plugin.procos",
-    "version": "0.1.4",
+    "version": "SNAPSHOT",
     "type": "community",
     "distribs": [
-        "0.8.1"
+        "SNAPSHOT"
     ],
     "hook": {
         "package": "plugins.procos",
