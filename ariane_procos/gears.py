@@ -211,7 +211,16 @@ class DirectoryGear(InjectorGearSkeleton):
                     SystemGear.osi.save()
                 operating_system.osi_id = SystemGear.osi.id
 
-        #CLEAN NICs
+        # SYNC EMBEDDING OSI
+        if SystemGear.config.system_context.embedding_osi_hostname is not None:
+            embedding_osi = OSInstanceService.find_os_instance(
+                osi_name=SystemGear.config.system_context.embedding_osi_hostname
+            )
+            if embedding_osi is not None and SystemGear.osi.embedding_osi_id is not embedding_osi.id:
+                SystemGear.osi.embedding_osi_id = embedding_osi.id
+                SystemGear.osi.save()
+
+        # CLEAN NICs
         for nic_id in SystemGear.osi.nic_ids:
             nic = NICService.find_nic(nic_id=nic_id)
             nic.remove()
@@ -223,7 +232,7 @@ class DirectoryGear(InjectorGearSkeleton):
             return
 
         # Sync OS Type
-        if operating_system.ost_id != None and operating_system.ost_id != 0:
+        if operating_system.ost_id is not None and operating_system.ost_id != 0:
             SystemGear.ost = OSTypeService.find_ostype(ost_id=operating_system.ost_id)
             if SystemGear.ost is not None and SystemGear.osi.ost_id != SystemGear.ost.id:
                 SystemGear.ost = None
@@ -1444,6 +1453,7 @@ class SystemGear(InjectorGearSkeleton):
     routing_areas = []
     subnets = []
     osi = None
+    embedding_osi = None
     ost = None
     ost_company = None
     team = None
