@@ -635,6 +635,7 @@ class DirectoryGear(InjectorGearSkeleton):
                    )
                 else:
                     nic2save.nic_ipa_id = ip_address.id if ip_address is not None else None
+                    nic2save.nic_osi_id = operating_system.osi_id
                 nic2save.save()
             else:
                 LOGGER.error("Error while saving nic : " + str(nic))
