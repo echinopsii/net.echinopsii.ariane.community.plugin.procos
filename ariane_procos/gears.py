@@ -212,7 +212,8 @@ class DirectoryGear(InjectorGearSkeleton):
                 operating_system.osi_id = SystemGear.osi.id
 
         # SYNC EMBEDDING OSI
-        if SystemGear.config.system_context.embedding_osi_hostname is not None:
+        if SystemGear.config.system_context.embedding_osi_hostname is not None and \
+                SystemGear.config.system_context.embedding_osi_hostname:
             embedding_osi = OSInstanceService.find_os_instance(
                 osi_name=SystemGear.config.system_context.embedding_osi_hostname
             )
