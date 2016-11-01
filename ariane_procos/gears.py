@@ -218,12 +218,12 @@ class DirectoryGear(InjectorGearSkeleton):
             )
             if embedding_osi is not None and SystemGear.osi.embedding_osi_id is not embedding_osi.id:
                 SystemGear.osi.embedding_osi_id = embedding_osi.id
-                SystemGear.osi.save()
 
         # CLEAN NICs
         for nic_id in SystemGear.osi.nic_ids:
             nic = NICService.find_nic(nic_id=nic_id)
             nic.remove()
+        SystemGear.osi.nic_ids = []
 
     @staticmethod
     def sync_operating_system_type(operating_system):
