@@ -238,7 +238,7 @@ class NicDuplex(object):
 class NetworkInterfaceCard(object):
     def __init__(self, nic_id=None, name=None, mac_address=None, duplex=None, speed=None, mtu=None,
                  ipv4_id=None, ipv4_address=None, ipv4_subnet_addr=None, ipv4_subnet_mask=None, ipv4_broadcast=None,
-                 ipv4_fqdn=None, ipv6_address=None, ipv6_mask=None, is_default=False):
+                 ipv4_fqdn=None, ipv6_address=None, ipv6_mask=None, is_default=False, in_local_routingarea=False):
         self.nic_id = nic_id
         self.name = name
         self.mac_address = mac_address
@@ -254,6 +254,7 @@ class NetworkInterfaceCard(object):
         self.ipv6_address = ipv6_address
         self.ipv6_mask = ipv6_mask
         self.is_default = is_default
+        self.in_local_routingarea = in_local_routingarea
 
     def __eq__(self, other):
         if self.nic_id != other.nic_id or self.name != other.name or self.mac_address != other.mac_address\
@@ -284,7 +285,8 @@ class NetworkInterfaceCard(object):
             'ipv4_fqdn': self.ipv4_fqdn,
             'ipv6_address': self.ipv6_address,
             'ipv6_mask': self.ipv6_mask,
-            'is_default': self.is_default
+            'is_default': self.is_default,
+            'in_local_routingarea': self.in_local_routingarea
         }
         return json_obj
 
@@ -305,7 +307,8 @@ class NetworkInterfaceCard(object):
                                     ipv4_subnet_mask=json_obj['ipv4_subnet_mask'],
                                     ipv4_broadcast=json_obj['ipv4_broadcast'], ipv4_fqdn=json_obj['ipv4_fqdn'],
                                     ipv4_id=json_obj['ipv4_id'], ipv6_address=json_obj['ipv6_address'],
-                                    ipv6_mask=json_obj['ipv6_mask'])
+                                    ipv6_mask=json_obj['ipv6_mask'],
+                                    in_local_routingarea=json_obj['in_local_routingarea'])
 
     @staticmethod
     def duplex_2_string(duplex):
@@ -323,7 +326,7 @@ class OperatingSystem(object):
     def __init__(self, container_id=None, osi_id=None, ost_id=None, environment_id=None, team_id=None,
                  location_id=None, routing_area_ids=None, subnet_ids=None,
                  hostname=None, last_nics=None, nics=None, last_processs=None, processs=None,
-                 duplex_links_endpoint=None, wip_delete_duplex_links_endpoints=None):
+                 duplex_links_endpoint=None, wip_delete_duplex_links_endpoints=None, config=None):
         self.container_id = container_id
 
         self.osi_id = osi_id
@@ -334,6 +337,7 @@ class OperatingSystem(object):
         self.environment_id = environment_id
         self.team_id = team_id
 
+        self.config = config
         self.hostname = hostname if hostname is not None else socket.gethostname()
         self.last_nics = last_nics if last_nics is not None else []
         self.nics = nics if nics is not None else []
@@ -359,23 +363,25 @@ class OperatingSystem(object):
 
         if mapping_socket.destination_ip is not None and mapping_socket.family == "AF_INET":
             for nic in self.nics:
-                if NetworkInterfaceCard.ip_is_in_subnet(mapping_socket.destination_ip,
-                                                        nic.ipv4_subnet_addr, nic.ipv4_subnet_mask):
+                if nic.in_local_routingarea and NetworkInterfaceCard.ip_is_in_subnet(
+                        mapping_socket.destination_ip,nic.ipv4_subnet_addr, nic.ipv4_subnet_mask
+                ):
                     destination_is_local = True
                     break
         elif mapping_socket.destination_ip is not None and mapping_socket.family == "AF_INET6":
             destination_ipv4 = MapSocket.ipv6_2_ipv4(mapping_socket.destination_ip)
             if destination_ipv4 != mapping_socket.destination_ip:
                 for nic in self.nics:
-                    if NetworkInterfaceCard.ip_is_in_subnet(destination_ipv4,
-                                                            nic.ipv4_subnet_addr, nic.ipv4_subnet_mask):
+                    if nic.in_local_routingarea and NetworkInterfaceCard.ip_is_in_subnet(
+                            destination_ipv4, nic.ipv4_subnet_addr, nic.ipv4_subnet_mask
+                    ):
                         destination_is_local = True
                         break
             else:
-                #TODO: check is ipv6 in subnet ?
+                # TODO: check is ipv6 in subnet ?
                 for nic in self.nics:
-                    if nic.ipv6_address is not None and \
-                       mapping_socket.destination_ip == nic.ipv6_address:
+                    if nic.in_local_routingarea and nic.ipv6_address is not None and \
+                            mapping_socket.destination_ip == nic.ipv6_address:
                         destination_is_local = True
                         break
         elif mapping_socket.family == "AF_UNIX":
@@ -481,7 +487,8 @@ class OperatingSystem(object):
                         elif snic.family == socket.AddressFamily.AF_INET:
                             nic.ipv4_address = snic.address
                             if snic.address is not None and snic.netmask is not None:
-                                ntw_addr = ip_network(str(snic.address) + '/' + str(snic.netmask), strict=False).network_address
+                                ntw_addr = ip_network(str(snic.address) + '/' +
+                                                      str(snic.netmask), strict=False).network_address
                             else:
                                 ntw_addr = None
                             if ntw_addr is not None:
@@ -490,6 +497,13 @@ class OperatingSystem(object):
                                 nic.ipv4_subnet_addr = None
                             nic.ipv4_subnet_mask = snic.netmask
                             nic.ipv4_broadcast = snic.broadcast
+                            if self.config.local_routing_area is not None and \
+                                    self.config.local_routing_area.subnets.__len__() != 0:
+                                for subnet in self.config.local_routing_area.subnets:
+                                    if nic.ipv4_subnet_addr == subnet.subnet_ip:
+                                        LOGGER.info('NIC ' + str(nic.ipv4_address) + ' playing in local area only.')
+                                        nic.in_local_routingarea = True
+                                        break
                             try:
                                 nic.ipv4_fqdn = socket.gethostbyaddr(snic.address)[0]
                                 if nic.ipv4_fqdn == 'localhost' or nic.ipv4_fqdn == socket.gethostname():
@@ -499,7 +513,7 @@ class OperatingSystem(object):
                         elif snic.family == socket.AddressFamily.AF_INET6:
                             nic.ipv6_address = snic.address
                             nic.ipv6_mask = snic.netmask
-                            #ARIANE SERVER DO NOT MANAGE IPv6 CURRENTLY
+                            # ARIANE SERVER DO NOT MANAGE IPv6 CURRENTLY
                             pass
                         else:
                             pass

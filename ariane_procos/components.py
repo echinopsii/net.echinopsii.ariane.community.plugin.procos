@@ -30,11 +30,13 @@ LOGGER = logging.getLogger(__name__)
 
 class SystemComponent(InjectorComponentSkeleton):
     def __init__(self, attached_gear_id=None, hostname=socket.gethostname(),
-                 component_type=None, system_gear_actor_ref=None, domino_activator=None, domino_topic=None):
+                 component_type=None, system_gear_actor_ref=None, domino_activator=None,
+                 domino_topic=None, config=None):
         self.hostname = hostname
         self.domino = domino_activator
         self.topic = domino_topic
         self.system_gear_actor_ref = system_gear_actor_ref
+        self.config = config
         super(SystemComponent, self).__init__(
             component_id=
             'ariane.community.plugin.procos.components.cache.system_component@' + self.hostname,
@@ -50,7 +52,7 @@ class SystemComponent(InjectorComponentSkeleton):
         if cached_blob is not None:
             self.operating_system = OperatingSystem.json_2_operating_system(cached_blob)
         else:
-            self.operating_system = OperatingSystem()
+            self.operating_system = OperatingSystem(config=config)
             self.operating_system.sniff()
         self.version = 0
 

@@ -1487,7 +1487,8 @@ class SystemGear(InjectorGearSkeleton):
             component_type=component_type,
             system_gear_actor_ref=self.actor_ref,
             domino_activator=SystemGear.domino_activator,
-            domino_topic=SystemGear.domino_component_topic
+            domino_topic=SystemGear.domino_component_topic,
+            config=config
         ).proxy()
         self.directory_gear = DirectoryGear.start().proxy()
         self.mapping_gear = MappingGear.start().proxy()
