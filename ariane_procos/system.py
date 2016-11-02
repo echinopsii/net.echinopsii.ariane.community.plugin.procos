@@ -501,7 +501,7 @@ class OperatingSystem(object):
                                     self.config.local_routing_area.subnets.__len__() != 0:
                                 for subnet in self.config.local_routing_area.subnets:
                                     if nic.ipv4_subnet_addr == subnet.subnet_ip:
-                                        LOGGER.info('NIC ' + str(nic.ipv4_address) + ' playing in local area only.')
+                                        LOGGER.debug('NIC ' + str(nic.ipv4_address) + ' playing in local area only.')
                                         nic.in_local_routingarea = True
                                         break
                             try:

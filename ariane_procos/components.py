@@ -51,6 +51,7 @@ class SystemComponent(InjectorComponentSkeleton):
         cached_blob = self.component_cache_actor.blob.get()
         if cached_blob is not None:
             self.operating_system = OperatingSystem.json_2_operating_system(cached_blob)
+            self.operating_system.config = config
         else:
             self.operating_system = OperatingSystem(config=config)
             self.operating_system.sniff()
