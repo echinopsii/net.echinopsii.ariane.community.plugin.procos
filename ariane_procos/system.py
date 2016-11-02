@@ -497,7 +497,7 @@ class OperatingSystem(object):
                                 nic.ipv4_subnet_addr = None
                             nic.ipv4_subnet_mask = snic.netmask
                             nic.ipv4_broadcast = snic.broadcast
-                            if self.config.local_routing_area is not None and \
+                            if self.config is not None and self.config.local_routing_area is not None and \
                                     self.config.local_routing_area.subnets.__len__() != 0:
                                 for subnet in self.config.local_routing_area.subnets:
                                     if nic.ipv4_subnet_addr == subnet.subnet_ip:
