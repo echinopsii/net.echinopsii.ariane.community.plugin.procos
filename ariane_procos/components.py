@@ -32,6 +32,7 @@ class SystemComponent(InjectorComponentSkeleton):
     def __init__(self, attached_gear_id=None, hostname=socket.gethostname(),
                  component_type=None, system_gear_actor_ref=None, domino_activator=None,
                  domino_topic=None, config=None):
+        LOGGER.debug("SystemComponent.__init__")
         self.hostname = hostname
         self.domino = domino_activator
         self.topic = domino_topic
@@ -58,9 +59,11 @@ class SystemComponent(InjectorComponentSkeleton):
         self.version = 0
 
     def data_blob(self):
+        LOGGER.debug("SystemComponent.data_blob")
         return json.dumps(self.operating_system.operating_system_2_json())
 
     def sniff(self, synchronize_with_ariane_dbs=True):
+        LOGGER.debug("SystemComponent.sniff")
         try:
             LOGGER.info("Sniffing...")
             self.cache(refreshing=True, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
