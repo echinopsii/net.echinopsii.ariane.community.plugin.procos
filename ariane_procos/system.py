@@ -327,6 +327,8 @@ class OperatingSystem(object):
                  location_id=None, routing_area_ids=None, subnet_ids=None,
                  hostname=None, last_nics=None, nics=None, last_processs=None, processs=None,
                  duplex_links_endpoint=None, wip_delete_duplex_links_endpoints=None, config=None):
+        LOGGER.debug("OperatingSystem.__init__")
+
         self.container_id = container_id
 
         self.osi_id = osi_id
@@ -359,6 +361,7 @@ class OperatingSystem(object):
         return json.dumps(self.operating_system_2_json())
 
     def is_local_destination(self, mapping_socket):
+        LOGGER.debug("OperatingSystem.is_local_destination")
         destination_is_local = False
 
         if mapping_socket.destination_ip is not None and mapping_socket.family == "AF_INET":
@@ -392,12 +395,14 @@ class OperatingSystem(object):
         return destination_is_local
 
     def need_directories_refresh(self):
+        LOGGER.debug("OperatingSystem.need_directories_refresh")
         if self.last_nics != self.nics:
             return True
         else:
             return False
 
     def operating_system_2_json(self):
+        LOGGER.debug("OperatingSystem.operating_system_2_json")
         last_nics_json = []
         for nic in self.last_nics:
             last_nics_json.append(nic.to_json())
@@ -431,6 +436,7 @@ class OperatingSystem(object):
 
     @staticmethod
     def json_2_operating_system(json_obj):
+        LOGGER.debug("OperatingSystem.json_2_operating_system")
         last_nics_json = json_obj['last_nics']
         last_nics = []
         for last_nic_json in last_nics_json:
@@ -462,11 +468,13 @@ class OperatingSystem(object):
         )
 
     def update(self):
+        LOGGER.debug("OperatingSystem.update")
         self.last_nics = copy.deepcopy(self.nics)
         self.last_processs = copy.deepcopy(self.processs)
         self.sniff()
 
     def sniff(self):
+        LOGGER.debug("OperatingSystem.sniff")
         self.nics = []
         self.processs = []
         self.new_processs = []
