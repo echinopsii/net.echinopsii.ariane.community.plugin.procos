@@ -56,6 +56,7 @@ class ArianeConnector(object):
             'host': procos_config.nats_host,
             'port': procos_config.nats_port,
             'rpc_timeout': procos_config.nats_rpc_timeout,
+            'rpc_retry': procos_config.nats_rpc_retry,
             'client_properties': client_properties
         }
         rbmq_args = {
