@@ -63,9 +63,8 @@ class SystemComponent(InjectorComponentSkeleton):
         return json.dumps(self.operating_system.operating_system_2_json())
 
     def sniff(self, synchronize_with_ariane_dbs=True):
-        LOGGER.debug("SystemComponent.sniff")
         try:
-            LOGGER.info("Sniffing...")
+            LOGGER.info("SystemComponent.sniff")
             self.cache(refreshing=True, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
             self.operating_system.update()
             self.cache(refreshing=False, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())

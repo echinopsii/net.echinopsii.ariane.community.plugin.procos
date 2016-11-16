@@ -41,10 +41,10 @@ class DirectoryGear(InjectorGearSkeleton):
     def __init__(self):
         LOGGER.debug("DirectoryGear.__init__")
         super(DirectoryGear, self).__init__(
-            gear_id='ariane.community.plugin.procos.gears.cache.directory_gear@'+SystemGear.hostname,
-            gear_name='procos_directory_gear@'+SystemGear.hostname,
-            gear_description='Ariane ProcOS directory gear for '+SystemGear.hostname,
-            gear_admin_queue='ariane.community.plugin.procos.gears.cache.directory_gear@'+SystemGear.hostname,
+            gear_id='ariane.community.plugin.procos.gears.cache.directory_gear@' + str(SystemGear.hostname),
+            gear_name='procos_directory_gear@' + str(SystemGear.hostname),
+            gear_description='Ariane ProcOS directory gear for ' + str(SystemGear.hostname),
+            gear_admin_queue='ariane.community.plugin.procos.gears.cache.directory_gear@' + str(SystemGear.hostname),
             running=False
         )
         self.update_count = 0
@@ -64,8 +64,8 @@ class DirectoryGear(InjectorGearSkeleton):
 
     def on_failure(self, exception_type, exception_value, traceback_):
         LOGGER.debug("DirectoryGear.on_failure")
-        LOGGER.error(exception_type.__str__() + "/" + exception_value.__str__())
-        LOGGER.error(traceback_.format_exc())
+        LOGGER.error("DirectoryGear.on_failure - " + exception_type.__str__() + "/" + exception_value.__str__())
+        LOGGER.error("DirectoryGear.on_failure - " + traceback_.format_exc())
         if self.running:
             self.running = False
             self.cache(running=self.running)
@@ -73,14 +73,14 @@ class DirectoryGear(InjectorGearSkeleton):
     def gear_start(self):
         LOGGER.debug("DirectoryGear.gear_start")
         self.on_start()
-        LOGGER.info('procos_directory_gear@'+SystemGear.hostname+' has been started.')
+        LOGGER.info('procos_directory_gear@' + str(SystemGear.hostname) + ' has been started.')
 
     def gear_stop(self):
         LOGGER.debug("DirectoryGear.gear_stop")
         if self.running:
             self.running = False
             self.cache(running=self.running)
-            LOGGER.info('procos_directory_gear@'+SystemGear.hostname+' has been stopped.')
+            LOGGER.info('procos_directory_gear@' + str(SystemGear.hostname) + ' has been stopped.')
 
     def compute_current_possible_network(self, operating_system):
         LOGGER.debug("DirectoryGear.compute_current_possible_network")
@@ -149,19 +149,23 @@ class DirectoryGear(InjectorGearSkeleton):
 
                         if not nic_is_located:
                             if nic.mac_address is not None:
-                                LOGGER.warn('nic ' + nic.mac_address + '/' + nic.ipv4_address +
+                                LOGGER.warn('DirectoryGear.compute_current_possible_network - '
+                                            'nic ' + nic.mac_address + '/' + nic.ipv4_address +
                                             ' has not been located on the possibles networks')
                             else:
-                                LOGGER.warn('nic ' + nic.ipv4_address +
+                                LOGGER.warn('DirectoryGear.compute_current_possible_network - '
+                                            'nic ' + nic.ipv4_address +
                                             ' has not been located on the possibles networks')
 
             except Exception as e:
                 print(e.__str__())
 
         if current_possible_location_config.__len__() > 1:
-            LOGGER.warn('multiple current possible location found - will ignore directories sync')
+            LOGGER.warn('DirectoryGear.compute_current_possible_network - '
+                        'multiple current possible location found - will ignore directories sync')
         elif current_possible_location_config.__len__() == 0:
-            LOGGER.warn('no current possible location found - will ignore directories sync')
+            LOGGER.warn('DirectoryGear.compute_current_possible_network - '
+                        'no current possible location found - will ignore directories sync')
 
         if current_possible_location_config.__len__() != 1:
             self.is_network_sync_possible = False
@@ -178,7 +182,7 @@ class DirectoryGear(InjectorGearSkeleton):
         if SystemGear.fqdn is None:
             SystemGear.fqdn = SystemGear.hostname
 
-        LOGGER.debug("FQDN : " + str(SystemGear.fqdn))
+        LOGGER.debug("DirectoryGear.compute_current_possible_network - FQDN : " + str(SystemGear.fqdn))
 
         self.current_possible_network = [
             current_possible_location_config,
@@ -245,7 +249,7 @@ class DirectoryGear(InjectorGearSkeleton):
     def sync_operating_system_type(operating_system):
         LOGGER.debug("DirectoryGear.sync_operating_system_type")
         if SystemGear.osi is None:
-            LOGGER.error('operating system instance is not synced')
+            LOGGER.error('DirectoryGear.sync_operating_system_type - operating system instance is not synced')
             return
 
         # Sync OS Type
@@ -287,7 +291,7 @@ class DirectoryGear(InjectorGearSkeleton):
     def sync_environment(operating_system):
         LOGGER.debug("DirectoryGear.sync_environment")
         if SystemGear.osi is None:
-            LOGGER.error('operating system instance is not synced')
+            LOGGER.error('DirectoryGear.sync_environment - operating system instance is not synced')
             return
 
         # Sync environment
@@ -324,7 +328,7 @@ class DirectoryGear(InjectorGearSkeleton):
     def sync_team(operating_system):
         LOGGER.debug("DirectoryGear.sync_team")
         if SystemGear.osi is None:
-            LOGGER.error('operating system instance is not synced')
+            LOGGER.error('DirectoryGear.sync_team - operating system instance is not synced')
             return
 
         # Sync team
@@ -356,7 +360,7 @@ class DirectoryGear(InjectorGearSkeleton):
     def sync_network(self, operating_system):
         LOGGER.debug("DirectoryGear.sync_network")
         if SystemGear.osi is None:
-            LOGGER.error('operating system instance is not synced')
+            LOGGER.error('DirectoryGear.sync_network - operating system instance is not synced')
             return
 
         # Sync network stuffs
@@ -377,7 +381,7 @@ class DirectoryGear(InjectorGearSkeleton):
             SystemGear.location = LocationService.find_location(operating_system.location_id)
             if SystemGear.location is not None and SystemGear.location.name != current_location.name:
                 # This OS has moved
-                LOGGER.debug("operating system has a new location !")
+                LOGGER.debug("DirectoryGear.sync_network - operating system has a new location !")
                 SystemGear.location = None
                 operating_system.location_id = None
 
@@ -543,7 +547,7 @@ class DirectoryGear(InjectorGearSkeleton):
                     if subnet.id not in SystemGear.osi.subnet_ids:
                         SystemGear.osi.add_subnet(subnet)
 
-        #CLEAN LOCAL SUBNETS FIRST
+        # CLEAN LOCAL SUBNETS FIRST
         for local_subnet_config in local_virt_subnet_config:
             subnet = SubnetService.find_subnet(sb_name=local_subnet_config.name)
             if subnet is not None:
@@ -553,7 +557,7 @@ class DirectoryGear(InjectorGearSkeleton):
                     SystemGear.subnets.remove(subnet)
                 subnet.remove()
 
-        #THEN CLEAN LOCAL RA
+        # THEN CLEAN LOCAL RA
         loc_ra = RoutingAreaService.find_routing_area(ra_name=local_routing_area.name)
         if loc_ra is not None:
             if loc_ra.id in operating_system.routing_area_ids:
@@ -562,7 +566,7 @@ class DirectoryGear(InjectorGearSkeleton):
                 SystemGear.routing_areas.remove(loc_ra)
             loc_ra.remove()
 
-        #FINALLY REINIT LOCAL RA AND SUBNETS
+        # FINALLY REINIT LOCAL RA AND SUBNETS
         loc_ra = RoutingArea(name=local_routing_area.name,
                              multicast=local_routing_area.multicast,
                              ra_type=local_routing_area.type,
@@ -604,7 +608,7 @@ class DirectoryGear(InjectorGearSkeleton):
                 if to_be_removed:
                     ipv4.remove()
             else:
-                LOGGER.error("sync error on IP ("+str(ipv4_id)+")")
+                LOGGER.error("DirectoryGear.sync_network - sync error on IP ("+str(ipv4_id)+")")
                 SystemGear.osi.ip_address_ids.remove(ipv4_id)
 
         for nic in operating_system.nics:
@@ -644,26 +648,27 @@ class DirectoryGear(InjectorGearSkeleton):
             if nicmcaddr is not None and nicmcaddr:
                 nic2save = NICService.find_nic(nic_mac_address=nicmcaddr)
                 if nic2save is None:
-                   nic2save = NIC(
-                       name=SystemGear.hostname+"."+nic.name,
-                       mac_address=nicmcaddr,
-                       duplex=nic.duplex,
-                       speed=nic.speed,
-                       mtu=nic.mtu,
-                       nic_osi_id=operating_system.osi_id,
-                       nic_ipa_id=ip_address.id if ip_address is not None else None
-                   )
+                    nic2save = NIC(
+                        name=SystemGear.hostname+"."+nic.name,
+                        mac_address=nicmcaddr,
+                        duplex=nic.duplex,
+                        speed=nic.speed,
+                        mtu=nic.mtu,
+                        nic_osi_id=operating_system.osi_id,
+                        nic_ipa_id=ip_address.id if ip_address is not None else None
+                    )
                 else:
                     nic2save.nic_ipa_id = ip_address.id if ip_address is not None else None
                     nic2save.nic_osi_id = operating_system.osi_id
                 nic2save.save()
             else:
-                LOGGER.error("Error while saving nic : " + str(nic))
+                LOGGER.error("DirectoryGear.sync_network - Error while saving nic : " + str(nic))
 
     def init_ariane_directories(self, component):
         LOGGER.debug("DirectoryGear.init_ariane_directories")
         operating_system = component.operating_system.get()
         try:
+            start_time = timeit.default_timer()
             self.sync_operating_system(operating_system)
             self.sync_operating_system_type(operating_system)
             self.sync_environment(operating_system)
@@ -672,9 +677,11 @@ class DirectoryGear(InjectorGearSkeleton):
             self.compute_current_possible_network(operating_system)
             if self.is_network_sync_possible:
                 self.sync_network(operating_system)
+            sync_proc_time = timeit.default_timer()-start_time
+            LOGGER.info('DirectoryGear.init_ariane_directories - time : ' + str(sync_proc_time))
         except Exception as e:
-            LOGGER.error(e.__str__())
-            LOGGER.error(traceback.format_exc())
+            LOGGER.error("DirectoryGear.init_ariane_directories - " + e.__str__())
+            LOGGER.error("DirectoryGear.init_ariane_directories - " + traceback.format_exc())
 
     def update_ariane_directories(self, operating_system):
         LOGGER.debug("DirectoryGear.update_ariane_directories")
@@ -686,31 +693,36 @@ class DirectoryGear(InjectorGearSkeleton):
                     if self.is_network_sync_possible:
                         self.sync_network(operating_system)
                 else:
-                    LOGGER.debug('no changes with last sniff')
+                    LOGGER.debug('DirectoryGear.update_ariane_directories - no changes with last sniff')
             except Exception as e:
-                LOGGER.error(e.__str__())
-                LOGGER.error(traceback.format_exc())
+                LOGGER.error("DirectoryGear.update_ariane_directories - " + e.__str__())
+                LOGGER.error("DirectoryGear.update_ariane_directories - " + traceback.format_exc())
         else:
-            LOGGER.warn('DIRECTORIES SYNC ARE IGNORED')
+            LOGGER.warn('DirectoryGear.update_ariane_directories - DIRECTORIES SYNC ARE IGNORED')
 
     def synchronize_with_ariane_directories(self, component):
         LOGGER.debug("DirectoryGear.synchronize_with_ariane_directories")
         if self.running:
+            start_time = timeit.default_timer()
             operating_system = component.operating_system.get()
             self.update_ariane_directories(operating_system)
             self.update_count += 1
+            sync_proc_time = timeit.default_timer()-start_time
+            LOGGER.info('DirectoryGear.synchronize_with_ariane_directories - time : ' + str(sync_proc_time))
         else:
-            LOGGER.warn("Synchronization requested but procos_directory_gear@"+SystemGear.hostname+" is not running.")
+            LOGGER.warn("DirectoryGear.synchronize_with_ariane_directories - "
+                        "Synchronization requested but procos_directory_gear@" + str(SystemGear.hostname) +
+                        " is not running.")
 
 
 class MappingGear(InjectorGearSkeleton):
     def __init__(self):
         LOGGER.debug("MappingGear.__init__")
         super(MappingGear, self).__init__(
-            gear_id='ariane.community.plugin.procos.gears.cache.mapping_gear@'+SystemGear.hostname,
-            gear_name='procos_mapping_gear@'+SystemGear.hostname,
-            gear_description='Ariane ProcOS injector gear for '+SystemGear.hostname,
-            gear_admin_queue='ariane.community.plugin.procos.gears.cache.mapping_gear@'+SystemGear.hostname,
+            gear_id='ariane.community.plugin.procos.gears.cache.mapping_gear@' + str(SystemGear.hostname),
+            gear_name='procos_mapping_gear@' + str(SystemGear.hostname),
+            gear_description='Ariane ProcOS injector gear for ' + str(SystemGear.hostname),
+            gear_admin_queue='ariane.community.plugin.procos.gears.cache.mapping_gear@' + str(SystemGear.hostname),
             running=False
         )
         self.update_count = 0
@@ -729,8 +741,8 @@ class MappingGear(InjectorGearSkeleton):
 
     def on_failure(self, exception_type, exception_value, traceback_):
         LOGGER.debug("MappingGear.on_failure")
-        LOGGER.error(exception_type.__str__() + "/" + exception_value.__str__())
-        LOGGER.error(traceback_.format_exc())
+        LOGGER.error("MappingGear.on_failure - " + exception_type.__str__() + "/" + exception_value.__str__())
+        LOGGER.error("MappingGear.on_failure - " + traceback_.format_exc())
         if self.running:
             self.running = False
             self.cache(running=self.running)
@@ -738,14 +750,14 @@ class MappingGear(InjectorGearSkeleton):
     def gear_start(self):
         LOGGER.debug("MappingGear.gear_start")
         self.on_start()
-        LOGGER.info('procos_mapping_gear@'+SystemGear.hostname+' has been started.')
+        LOGGER.info('procos_mapping_gear@' + str(SystemGear.hostname) + ' has been started.')
 
     def gear_stop(self):
         LOGGER.debug("MappingGear.gear_stop")
         if self.running:
             self.running = False
             self.cache(running=self.running)
-            LOGGER.info('procos_mapping_gear@'+SystemGear.hostname+' has been stopped.')
+            LOGGER.info('procos_mapping_gear@' + str(SystemGear.hostname) + ' has been stopped.')
 
     @staticmethod
     def sync_container_network(container, location, routing_areas, subnets):
@@ -811,12 +823,12 @@ class MappingGear(InjectorGearSkeleton):
         if self.osi_container is None and operating_system.container_id is not None:
             self.osi_container = ContainerService.find_container(cid=operating_system.container_id)
             if self.osi_container is None:
-                LOGGER.error('consistency error between ProcOS cache and mapping DB (' +
+                LOGGER.error('MappingGear.sync_container - consistency error between ProcOS cache and mapping DB (' +
                              str(operating_system.container_id) + ')')
                 operating_system.container_id = None
 
         if self.osi_container is None:
-            LOGGER.debug("FQDN : " + str(SystemGear.fqdn))
+            LOGGER.debug("MappingGear.sync_container - FQDN : " + str(SystemGear.fqdn))
             if SystemGear.fqdn is None:
                 SystemGear.fqdn = SystemGear.hostname
             self.osi_container = Container(
@@ -865,7 +877,8 @@ class MappingGear(InjectorGearSkeleton):
             target_location = target_possible_locations[0]
             MappingGear.sync_container_network(target_container, target_location, target_routing_areas, target_subnets)
         else:
-            LOGGER.warn("REMOTE CONTAINER LOCALISATION HAS NOT BEEN FOUND FOR " + target_container.name)
+            LOGGER.warn("MappingGear.sync_remote_container_network - "
+                        "remote container loc not found for " + target_container.name)
         LOGGER.debug("MappingGear.sync_remote_container_network - done")
 
     @staticmethod
@@ -888,17 +901,17 @@ class MappingGear(InjectorGearSkeleton):
         ret = None
         for map_socket in map_sockets:
             if map_socket.source_endpoint_id == endpoint_id or map_socket.destination_endpoint_id == endpoint_id:
-                ret= map_socket
+                ret = map_socket
                 break
         return ret
 
     def sync_map_socket(self, operating_system):
         LOGGER.debug("MappingGear.sync_map_socket - begin")
         if self.osi_container is None:
-            LOGGER.error('operating system container is not synced')
+            LOGGER.error('MappingGear.sync_map_socket - operating system container is not synced')
             return
 
-        t = timeit.default_timer()
+        start_time = timeit.default_timer()
         for proc in operating_system.processs:
             if SystemGear.config.processes_filter is not None:
                 is_found = False
@@ -922,13 +935,14 @@ class MappingGear(InjectorGearSkeleton):
                         name = '[' + str(proc.pid) + '] ' + str(proc.name)
                 else:
                     name = '[' + str(proc.pid) + '] ' + str(proc.name) + ' - ' + str(proc.cmdline[0])
-                LOGGER.debug(str(proc.new_map_sockets.__len__()) + ' new socket found for process ' + name)
+                LOGGER.debug("MappingGear.sync_map_socket - " + str(proc.new_map_sockets.__len__()) +
+                             ' new socket found for process ' + name)
                 for map_socket in proc.new_map_sockets:
                     if map_socket.source_ip is not None and map_socket.source_port is not None:
 
                         if map_socket.source_port == SystemGear.config.system_context.admin_gate_port and \
                                 map_socket.status == "LISTEN":
-                            LOGGER.debug("gate process found (" + name + ")")
+                            LOGGER.debug("MappingGear.sync_map_socket - gate process found (" + name + ")")
                             continue
 
                         proto = None
@@ -937,19 +951,20 @@ class MappingGear(InjectorGearSkeleton):
                         elif map_socket.type == "SOCK_DGRAM":
                             proto = "udp://"
                         else:
-                            LOGGER.warn("socket type " + map_socket.type + " currently not supported !")
+                            LOGGER.warn("MappingGear.sync_map_socket - socket type " + map_socket.type +
+                                        " currently not supported !")
 
                         if proto is not None:
                             if proc.is_node:
                                 source_parent_node_id = proc.mapping_id
                             else:
                                 source_parent_node_id = 0
-                                LOGGER.warn("process as container not yet implemented !")
+                                LOGGER.warn("MappingGear.sync_map_socket - process as container not yet implemented !")
 
                             if source_parent_node_id != 0:
                                 if map_socket.status != "LISTEN":
                                     source_url = proto + map_socket.source_ip + ":" + str(map_socket.source_port) + \
-                                                 str(map_socket.file_descriptors)
+                                        str(map_socket.file_descriptors)
                                 else:
                                     source_url = proto + map_socket.source_ip + ":" + str(map_socket.source_port)
 
@@ -961,73 +976,73 @@ class MappingGear(InjectorGearSkeleton):
                                 if source_endpoint is None and destination_is_local:
                                     if map_socket.source_ip == "127.0.0.1":
                                         other_source_url_possibility = proto + "::1:" + str(map_socket.source_port) + \
-                                                                       str(map_socket.file_descriptors)
+                                            str(map_socket.file_descriptors)
                                         source_endpoint = EndpointService.find_endpoint(
                                             url=other_source_url_possibility
                                         )
                                         if source_endpoint is None:
                                             other_source_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.source_port) + \
-                                                                           str(map_socket.file_descriptors)
+                                                str(map_socket.file_descriptors)
                                             source_endpoint = EndpointService.find_endpoint(
                                                 url=other_source_url_possibility
                                             )
                                         if source_endpoint is None:
                                             other_source_url_possibility = proto + "::127.0.0.1:" + str(map_socket.source_port) + \
-                                                                           str(map_socket.file_descriptors)
+                                                str(map_socket.file_descriptors)
                                             source_endpoint = EndpointService.find_endpoint(
                                                 url=other_source_url_possibility
                                             )
                                     elif map_socket.source_ip == "::ffff:127.0.0.1":
                                         other_source_url_possibility = proto + "::1:" + str(map_socket.source_port) + \
-                                                                       str(map_socket.file_descriptors)
+                                            str(map_socket.file_descriptors)
                                         source_endpoint = EndpointService.find_endpoint(
                                             url=other_source_url_possibility
                                         )
                                         if source_endpoint is None:
                                             other_source_url_possibility = proto + "127.0.0.1:" + str(map_socket.source_port) + \
-                                                                           str(map_socket.file_descriptors)
+                                                str(map_socket.file_descriptors)
                                             source_endpoint = EndpointService.find_endpoint(
                                                 url=other_source_url_possibility
                                             )
                                         if source_endpoint is None:
                                             other_source_url_possibility = proto + "::127.0.0.1:" + str(map_socket.source_port) + \
-                                                                           str(map_socket.file_descriptors)
+                                                str(map_socket.file_descriptors)
                                             source_endpoint = EndpointService.find_endpoint(
                                                 url=other_source_url_possibility
                                             )
                                     elif map_socket.source_ip == "::127.0.0.1":
                                         other_source_url_possibility = proto + "::1:" + str(map_socket.source_port) + \
-                                                                       str(map_socket.file_descriptors)
+                                            str(map_socket.file_descriptors)
                                         source_endpoint = EndpointService.find_endpoint(
                                             url=other_source_url_possibility
                                         )
                                         if source_endpoint is None:
                                             other_source_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.source_port) + \
-                                                                           str(map_socket.file_descriptors)
+                                                str(map_socket.file_descriptors)
                                             source_endpoint = EndpointService.find_endpoint(
                                                 url=other_source_url_possibility
                                             )
                                         if source_endpoint is None:
                                             other_source_url_possibility = proto + "127.0.0.1:" + str(map_socket.source_port) + \
-                                                                           str(map_socket.file_descriptors)
+                                                str(map_socket.file_descriptors)
                                             source_endpoint = EndpointService.find_endpoint(
                                                 url=other_source_url_possibility
                                             )
                                     elif map_socket.source_ip == "::1":
                                         other_source_url_possibility = proto + "127.0.0.1:" + str(map_socket.source_port) + \
-                                                                       str(map_socket.file_descriptors)
+                                            str(map_socket.file_descriptors)
                                         source_endpoint = EndpointService.find_endpoint(
                                             url=other_source_url_possibility
                                         )
                                         if source_endpoint is None:
                                             other_source_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.source_port) + \
-                                                                           str(map_socket.file_descriptors)
+                                                str(map_socket.file_descriptors)
                                             source_endpoint = EndpointService.find_endpoint(
                                                 url=other_source_url_possibility
                                             )
                                         if source_endpoint is None:
                                             other_source_url_possibility = proto + "::127.0.0.1:" + str(map_socket.source_port) + \
-                                                                           str(map_socket.file_descriptors)
+                                                str(map_socket.file_descriptors)
                                             source_endpoint = EndpointService.find_endpoint(
                                                 url=other_source_url_possibility
                                             )
@@ -1045,8 +1060,8 @@ class MappingGear(InjectorGearSkeleton):
                                     operating_system.duplex_links_endpoints.append(source_endpoint.id)
 
                                 map_socket.source_endpoint_id = source_endpoint.id
-                                LOGGER.debug('source socket endpoint on mapping db : (' + source_url + ',' +
-                                             str(map_socket.source_endpoint_id) + ')')
+                                LOGGER.debug('MappingGear.sync_map_socket - source socket endpoint on mapping db : (' +
+                                             source_url + ',' + str(map_socket.source_endpoint_id) + ')')
 
                                 if map_socket.destination_ip is not None and map_socket.destination_port is not None:
                                     target_url = proto + map_socket.destination_ip + ":" + \
@@ -1111,7 +1126,7 @@ class MappingGear(InjectorGearSkeleton):
                                                 ) if target_os_instance_type is not None else None
                                                 company = target_os_instance_type_cmp.name\
                                                     if target_os_instance_type_cmp is not None else\
-                                                        "Unknown OS Type Company"
+                                                    "Unknown OS Type Company"
 
                                                 name = target_fqdn if target_fqdn is not None else\
                                                     map_socket.destination_ip
@@ -1177,7 +1192,8 @@ class MappingGear(InjectorGearSkeleton):
                                                     if proc_srv.is_node:
                                                         target_node = NodeService.find_node(nid=proc_srv.mapping_id)
                                                     else:
-                                                        LOGGER.warn("process as container not yet implemented !")
+                                                        LOGGER.warn("MappingGear.sync_map_socket - process as container"
+                                                                    " not yet implemented !")
                                                     target_url += str(srv_socket.file_descriptors)
                                                     if target_node is not None:
                                                         target_endpoint = EndpointService.find_endpoint(
@@ -1186,73 +1202,73 @@ class MappingGear(InjectorGearSkeleton):
                                                         if target_endpoint is None:
                                                             if map_socket.destination_ip == "127.0.0.1":
                                                                 other_target_url_possibility = proto + "::1:" + str(map_socket.destination_port) + \
-                                                                                               str(srv_socket.file_descriptors)
+                                                                    str(srv_socket.file_descriptors)
                                                                 target_endpoint = EndpointService.find_endpoint(
                                                                     url=other_target_url_possibility
                                                                 )
                                                                 if target_endpoint is None:
                                                                     other_target_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.destination_port) + \
-                                                                                                   str(srv_socket.file_descriptors)
+                                                                        str(srv_socket.file_descriptors)
                                                                     target_endpoint = EndpointService.find_endpoint(
                                                                         url=other_target_url_possibility
                                                                     )
                                                                 if target_endpoint is None:
                                                                     other_target_url_possibility = proto + "::127.0.0.1:" + str(map_socket.destination_port) + \
-                                                                                                   str(srv_socket.file_descriptors)
+                                                                        str(srv_socket.file_descriptors)
                                                                     target_endpoint = EndpointService.find_endpoint(
                                                                         url=other_target_url_possibility
                                                                     )
                                                             elif map_socket.destination_ip == "::ffff:127.0.0.1":
                                                                 other_target_url_possibility = proto + "::1:" + str(map_socket.destination_port) + \
-                                                                                               str(srv_socket.file_descriptors)
+                                                                    str(srv_socket.file_descriptors)
                                                                 target_endpoint = EndpointService.find_endpoint(
                                                                     url=other_target_url_possibility
                                                                 )
                                                                 if target_endpoint is None:
                                                                     other_target_url_possibility = proto + "127.0.0.1:" + str(map_socket.destination_port) + \
-                                                                                                   str(srv_socket.file_descriptors)
+                                                                        str(srv_socket.file_descriptors)
                                                                     target_endpoint = EndpointService.find_endpoint(
                                                                         url=other_target_url_possibility
                                                                     )
                                                                 if target_endpoint is None:
                                                                     other_target_url_possibility = proto + "::127.0.0.1:" + str(map_socket.destination_port) + \
-                                                                                                   str(srv_socket.file_descriptors)
+                                                                        str(srv_socket.file_descriptors)
                                                                     target_endpoint = EndpointService.find_endpoint(
                                                                         url=other_target_url_possibility
                                                                     )
                                                             elif map_socket.source_ip == "::127.0.0.1":
                                                                 other_target_url_possibility = proto + "::1:" + str(map_socket.destination_port) + \
-                                                                                               str(srv_socket.file_descriptors)
+                                                                    str(srv_socket.file_descriptors)
                                                                 target_endpoint = EndpointService.find_endpoint(
                                                                     url=other_target_url_possibility
                                                                 )
                                                                 if target_endpoint is None:
                                                                     other_target_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.destination_port) + \
-                                                                                                   str(srv_socket.file_descriptors)
+                                                                        str(srv_socket.file_descriptors)
                                                                     target_endpoint = EndpointService.find_endpoint(
                                                                         url=other_target_url_possibility
                                                                     )
                                                                 if target_endpoint is None:
                                                                     other_target_url_possibility = proto + "127.0.0.1:" + str(map_socket.destination_port) + \
-                                                                                                   str(srv_socket.file_descriptors)
+                                                                        str(srv_socket.file_descriptors)
                                                                     target_endpoint = EndpointService.find_endpoint(
                                                                         url=other_target_url_possibility
                                                                     )
                                                             elif map_socket.source_ip == "::1":
                                                                 other_target_url_possibility = proto + "127.0.0.1:" + str(map_socket.destination_port) + \
-                                                                                               str(srv_socket.file_descriptors)
+                                                                    str(srv_socket.file_descriptors)
                                                                 target_endpoint = EndpointService.find_endpoint(
                                                                     url=other_target_url_possibility
                                                                 )
                                                                 if target_endpoint is None:
                                                                     other_target_url_possibility = proto + "::ffff:127.0.0.1:" + str(map_socket.destination_port) + \
-                                                                                                   str(srv_socket.file_descriptors)
+                                                                        str(srv_socket.file_descriptors)
                                                                     target_endpoint = EndpointService.find_endpoint(
                                                                         url=other_target_url_possibility
                                                                     )
                                                                 if target_endpoint is None:
                                                                     other_target_url_possibility = proto + "::127.0.0.1:" + str(map_socket.destination_port) + \
-                                                                                                   str(srv_socket.file_descriptors)
+                                                                        str(srv_socket.file_descriptors)
                                                                     target_endpoint = EndpointService.find_endpoint(
                                                                         url=other_target_url_possibility
                                                                     )
@@ -1278,14 +1294,17 @@ class MappingGear(InjectorGearSkeleton):
 
                                     if target_endpoint is not None:
                                         map_socket.destination_endpoint_id = target_endpoint.id
-                                        LOGGER.debug('target socket endpoint on mapping db : (' + target_url + ',' +
+                                        LOGGER.debug('MappingGear.sync_map_socket - target socket endpoint '
+                                                     'on mapping db : (' + target_url + ',' +
                                                      str(map_socket.destination_endpoint_id) + ')')
                                     if target_node is not None:
                                         map_socket.destination_node_id = target_node.id
-                                        LOGGER.debug('target socket node on mapping db : (' + target_url + ',' +
+                                        LOGGER.debug('MappingGear.sync_map_socket - target socket node '
+                                                     'on mapping db : (' + target_url + ',' +
                                                      str(map_socket.destination_node_id) + ')')
                                     map_socket.destination_container_id = target_container.id
-                                    LOGGER.debug('target socket container on mapping db : (' + target_url + ',' +
+                                    LOGGER.debug('MappingGear.sync_map_socket - target socket container '
+                                                 'on mapping db : (' + target_url + ',' +
                                                  str(map_socket.destination_container_id) + ')')
 
                                     if map_socket.destination_endpoint_id is not None and \
@@ -1300,10 +1319,11 @@ class MappingGear(InjectorGearSkeleton):
                                             map_socket.transport_id = transport.id
                                             map_socket.link_id = link.id
                                     else:
-                                        LOGGER.debug('missing destination endpoint id for ' + str(map_socket))
+                                        LOGGER.debug('MappingGear.sync_map_socket - missing destination endpoint id '
+                                                     'for ' + str(map_socket))
 
                     else:
-                        LOGGER.debug('no source ip / port - ' + str(map_socket))
+                        LOGGER.debug('MappingGear.sync_map_socket - no source ip / port - ' + str(map_socket))
 
             if proc.mapping_id is not None and proc.dead_map_sockets is not None:
                 if proc.name != "exe":
@@ -1318,16 +1338,16 @@ class MappingGear(InjectorGearSkeleton):
                         name = '[' + str(proc.pid) + '] ' + str(proc.name)
                 else:
                     name = '[' + str(proc.pid) + '] ' + str(proc.name) + ' - ' + str(proc.cmdline[0])
-                LOGGER.debug(str(proc.dead_map_sockets.__len__()) + ' dead socket found for process ['
-                             + str(proc.mapping_id) + ']' + name)
+                LOGGER.debug("MappingGear.sync_map_socket - " + str(proc.dead_map_sockets.__len__()) +
+                             ' dead socket found for process [' + str(proc.mapping_id) + ']' + name)
                 for map_socket in proc.dead_map_sockets:
-                    #if map_socket.link_id is not None:
-                    #    link = LinkService.find_link(lid=map_socket.link_id)
-                    #    if link is not None:
-                    #        link.remove()
-                    #    else:
-                    #        LOGGER.warn("Dead socket (link : " + str(map_socket.link_id) + ") "
-                    #                    "doesn't exist anymore on DB !")
+                    # if map_socket.link_id is not None:
+                    #     link = LinkService.find_link(lid=map_socket.link_id)
+                    #     if link is not None:
+                    #         link.remove()
+                    #     else:
+                    #         LOGGER.warn("Dead socket (link : " + str(map_socket.link_id) + ") "
+                    #                     "doesn't exist anymore on DB !")
                     if map_socket.source_endpoint_id is not None and \
                        (
                             map_socket.source_endpoint_id not in operating_system.wip_delete_duplex_links_endpoints or
@@ -1335,12 +1355,14 @@ class MappingGear(InjectorGearSkeleton):
                        ):
                         source_endpoint = EndpointService.find_endpoint(eid=map_socket.source_endpoint_id)
                         if source_endpoint is not None:
-                            LOGGER.debug('Remove source endpoint ' + str(map_socket.source_endpoint_id))
+                            LOGGER.debug('MappingGear.sync_map_socket - Remove source endpoint ' +
+                                         str(map_socket.source_endpoint_id))
                             source_endpoint.remove()
                             if map_socket.source_endpoint_id in operating_system.duplex_links_endpoints:
                                 operating_system.wip_delete_duplex_links_endpoints.append(map_socket.source_endpoint_id)
                         else:
-                            LOGGER.warn("Dead socket (source endpoint : " + str(map_socket.source_endpoint_id) +
+                            LOGGER.warn("MappingGear.sync_map_socket - Dead socket (source endpoint : " +
+                                        str(map_socket.source_endpoint_id) +
                                         ") doesn't exist anymore on DB!")
                     elif map_socket.source_endpoint_id is not None and \
                             map_socket.source_endpoint_id in operating_system.wip_delete_duplex_links_endpoints:
@@ -1357,14 +1379,15 @@ class MappingGear(InjectorGearSkeleton):
                         if target_endpoint is not None:
                             array_link = LinkService.find_link(tep_id=target_endpoint.id)
                             if array_link is not None and array_link.__len__() == 0:
-                                LOGGER.debug('Remove target endpoint ' + str(map_socket.destination_endpoint_id))
+                                LOGGER.debug('MappingGear.sync_map_socket - Remove target endpoint ' +
+                                             str(map_socket.destination_endpoint_id))
                                 target_endpoint.remove()
                                 if map_socket.destination_endpoint_id in operating_system.duplex_links_endpoints:
                                     operating_system.wip_delete_duplex_links_endpoints.append(
                                         map_socket.destination_endpoint_id
                                     )
                         else:
-                            LOGGER.warn("Dead socket (target endpoint : " +
+                            LOGGER.warn("MappingGear.sync_map_socket - Dead socket (target endpoint : " +
                                         str(map_socket.destination_endpoint_id) +
                                         ") doesn't exist anymore on DB!")
                     elif map_socket.destination_endpoint_id is not None and \
@@ -1372,18 +1395,19 @@ class MappingGear(InjectorGearSkeleton):
                         operating_system.wip_delete_duplex_links_endpoints.remove(map_socket.destination_endpoint_id)
                         operating_system.duplex_links_endpoints.remove(map_socket.destination_endpoint_id)
 
-        sync_proc_time = round(timeit.default_timer()-t)
-        LOGGER.debug('time : {0}'.format(sync_proc_time))
+        sync_proc_time = timeit.default_timer()-start_time
+        LOGGER.debug('MappingGear.sync_map_socket - time : ' + str(sync_proc_time))
         LOGGER.debug("MappingGear.sync_map_socket - done")
 
     def sync_processs(self, operating_system):
         LOGGER.debug("MappingGear.sync_processs - begin")
         if self.osi_container is None:
-            LOGGER.error('operating system container is not synced')
+            LOGGER.error('MappingGear.sync_processs - operating system container is not synced')
             return
 
-        t = timeit.default_timer()
-        LOGGER.debug(str(operating_system.new_processs.__len__()) + ' new processes found')
+        start_time = timeit.default_timer()
+        LOGGER.debug("MappingGear.sync_processs - " + str(operating_system.new_processs.__len__()) +
+                     ' new processes found')
         for process in operating_system.new_processs:
             if SystemGear.config.processes_filter is not None:
                 is_found = False
@@ -1430,9 +1454,11 @@ class MappingGear(InjectorGearSkeleton):
                         process.cmdline[pass_index+1] = "*****"
             process_map_obj.add_property(('cmdline', process.cmdline))
             process.mapping_id = process_map_obj.id
-            LOGGER.debug('new process on mapping db : (' + name + ',' + str(process.mapping_id) + ')')
+            LOGGER.debug('MappingGear.sync_processs - new process on mapping db : (' + name + ',' +
+                         str(process.mapping_id) + ')')
 
-        LOGGER.debug(str(operating_system.dead_processs.__len__()) + ' old processes found')
+        LOGGER.debug("MappingGear.sync_processs - " + str(operating_system.dead_processs.__len__()) +
+                     ' old processes found')
         for process in operating_system.dead_processs:
             if SystemGear.config.processes_filter is not None:
                 is_found = False
@@ -1443,7 +1469,6 @@ class MappingGear(InjectorGearSkeleton):
                 if not is_found:
                     continue
 
-            process_map_obj = None
             if process.name != "exe":
                 if "java" in process.name or "python" in process.name:
                     if "java" in process.name and "java" not in process.cmdline[0]:
@@ -1458,26 +1483,28 @@ class MappingGear(InjectorGearSkeleton):
                 name = '[' + str(process.pid) + '] ' + str(process.name) + ' - ' + str(process.cmdline[0])
 
             if process.mapping_id is None:
-                LOGGER.error('dead process (' + name + ') has not been saved on mapping db !')
+                LOGGER.error('MappingGear.sync_processs - dead process (' + name +
+                             ') has not been saved on mapping db !')
             else:
                 if process.is_node:
                     process_map_obj = NodeService.find_node(nid=process.mapping_id)
                 else:
                     process_map_obj = ContainerService.find_container(cid=process.mapping_id)
                 if process_map_obj is None:
-                    LOGGER.error('consistency error between ProcOS cache and mapping DB (' + name + ',' +
-                                 str(process.mapping_id) + ')')
+                    LOGGER.error('MappingGear.sync_processs - consistency error between ProcOS cache and mapping DB (' +
+                                 name + ',' + str(process.mapping_id) + ')')
                 else:
                     process_map_obj.remove()
 
-        sync_proc_time = round(timeit.default_timer()-t)
-        LOGGER.debug('time : {0}'.format(sync_proc_time))
+        sync_proc_time = timeit.default_timer()-start_time
+        LOGGER.debug('MappingGear.sync_processs - time : ' + str(sync_proc_time))
         LOGGER.debug("MappingGear.sync_processs - done")
 
     def synchronize_with_ariane_mapping(self, component):
         LOGGER.debug("MappingGear.synchronize_with_ariane_mapping")
         if self.running:
             try:
+                start_time = timeit.default_timer()
                 SessionService.open_session("ArianeProcOS" + socket.gethostname())
                 operating_system = component.operating_system.get()
                 self.sync_container(operating_system)
@@ -1486,26 +1513,29 @@ class MappingGear(InjectorGearSkeleton):
                 SessionService.commit()
                 self.update_count += 1
                 SessionService.close_session()
+                sync_proc_time = timeit.default_timer()-start_time
+                LOGGER.info('MappingGear.synchronize_with_ariane_mapping - time : ' + str(sync_proc_time))
             except Exception as e:
-                LOGGER.error(e.__str__())
-                LOGGER.error(traceback.format_exc())
+                LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + e.__str__())
+                LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + traceback.format_exc())
                 try:
                     SessionService.rollback()
                     SessionService.close_session()
                 except Exception as e:
-                    LOGGER.error(e.__str__())
-                    LOGGER.error(traceback.format_exc())
+                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + e.__str__())
+                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + traceback.format_exc())
         else:
-            LOGGER.warn('Synchronization requested but procos_mapping_gear@' + SystemGear.hostname + ' is not running.')
+            LOGGER.warn('Synchronization requested but procos_mapping_gear@' + str(SystemGear.hostname) +
+                        ' is not running.')
 
 
 class SystemGear(InjectorGearSkeleton):
-    #static reference on commons var
+    # static reference on commons var
     config = None
     hostname = None
     fqdn = None
 
-    #static reference to up to date ariane directories objects linked to this System
+    # static reference to up to date ariane directories objects linked to this System
     location = None
     routing_areas = []
     subnets = []
@@ -1551,7 +1581,6 @@ class SystemGear(InjectorGearSkeleton):
 
     def synchronize_with_ariane_dbs(self):
         LOGGER.debug("SystemGear.synchronize_with_ariane_dbs")
-        LOGGER.info("Synchonize with Ariane DBs...")
         self.directory_gear.synchronize_with_ariane_directories(self.component)
         self.mapping_gear.synchronize_with_ariane_mapping(self.component)
         SystemGear.domino_activator.activate(SystemGear.domino_ariane_sync_topic)
@@ -1561,7 +1590,6 @@ class SystemGear(InjectorGearSkeleton):
         LOGGER.info("Initializing...")
         self.directory_gear.init_ariane_directories(self.component).get()
         self.component.sniff(synchronize_with_ariane_dbs=False).get()
-        LOGGER.info("Synchonize with Ariane DBs...")
         self.directory_gear.synchronize_with_ariane_directories(self.component).get()
         self.mapping_gear.synchronize_with_ariane_mapping(self.component).get()
         LOGGER.info("Initialization done.")
@@ -1602,8 +1630,8 @@ class SystemGear(InjectorGearSkeleton):
 
     def on_failure(self, exception_type, exception_value, traceback_):
         LOGGER.debug("SystemGear.on_failure")
-        LOGGER.error(exception_type.__str__() + "/" + exception_value.__str__())
-        LOGGER.error(traceback_.format_exc())
+        LOGGER.error("SystemGear.on_failure - " + exception_type.__str__() + "/" + exception_value.__str__())
+        LOGGER.error("SystemGear.on_failure - " + traceback_.format_exc())
         try:
             if self.running:
                 self.running = False

@@ -371,6 +371,7 @@ class OperatingSystem(object):
                 ):
                     destination_is_local = True
                     break
+
         elif mapping_socket.destination_ip is not None and mapping_socket.family == "AF_INET6":
             destination_ipv4 = MapSocket.ipv6_2_ipv4(mapping_socket.destination_ip)
             if destination_ipv4 != mapping_socket.destination_ip:
@@ -387,6 +388,7 @@ class OperatingSystem(object):
                             mapping_socket.destination_ip == nic.ipv6_address:
                         destination_is_local = True
                         break
+
         elif mapping_socket.family == "AF_UNIX":
             destination_is_local = True
 
@@ -509,7 +511,8 @@ class OperatingSystem(object):
                                     self.config.local_routing_area.subnets.__len__() != 0:
                                 for subnet in self.config.local_routing_area.subnets:
                                     if nic.ipv4_subnet_addr == subnet.subnet_ip:
-                                        LOGGER.debug('NIC ' + str(nic.ipv4_address) + ' playing in local area only.')
+                                        LOGGER.debug('OperatingSystem.sniff - NIC ' + str(nic.ipv4_address) +
+                                                     ' playing in local area only.')
                                         nic.in_local_routingarea = True
                                         break
                             try:
@@ -546,7 +549,6 @@ class OperatingSystem(object):
                 proc.map_sockets = []
 
                 for psutil_connection in proc_connections:
-                    map_socket = None
                     if psutil_connection.status == psutil.CONN_LISTEN or psutil_connection.status == psutil.CONN_NONE \
                             or psutil_connection.status == psutil.CONN_CLOSE:
                         map_socket = MapSocket(family=MapSocket.family_2_string(psutil_connection.family),
@@ -565,7 +567,7 @@ class OperatingSystem(object):
                     if map_socket not in proc.map_sockets:
                         proc.map_sockets.append(map_socket)
                     map_socket.file_descriptors.append(psutil_connection.fd)
-                    LOGGER.debug(str(psutil_connection))
+                    LOGGER.debug("OperatingSystem.sniff - " + str(psutil_connection))
 
                 if proc in self.last_processs:
                     for last_proc in self.last_processs:
@@ -575,7 +577,8 @@ class OperatingSystem(object):
                                 proc.is_node = last_proc.is_node
                             else:
                                 name = '[' + str(proc.pid) + '] ' + str(proc.name)
-                                LOGGER.debug('process not saved on DB on previous round: ' + name)
+                                LOGGER.debug('OperatingSystem.sniff - process not saved on DB on previous round: ' +
+                                             name)
                                 self.new_processs.append(proc)
 
                             proc.last_map_sockets = copy.deepcopy(last_proc.map_sockets)
@@ -630,9 +633,9 @@ class OperatingSystem(object):
 
                 self.processs.append(proc)
             except psutil.NoSuchProcess:
-                LOGGER.debug("process " + str(pid) + " doesnt exist anymore")
+                LOGGER.debug("OperatingSystem.sniff - process " + str(pid) + " doesnt exist anymore")
             except psutil.AccessDenied:
-                LOGGER.debug("access denied for process " + str(pid))
+                LOGGER.debug("OperatingSystem.sniff - access denied for process " + str(pid))
 
         for process in self.last_processs:
             if process not in self.processs:
