@@ -67,7 +67,10 @@ class SystemComponent(InjectorComponentSkeleton):
             LOGGER.info("SystemComponent.sniff")
             self.cache(refreshing=True, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
             self.operating_system.update()
-            self.cache(refreshing=False, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
+            self.cache(
+                refreshing=False, next_action=InjectorCachedComponent.action_update,
+                data_blob=self.data_blob(), rollback_point=True
+            )
             self.version += 1
             self.domino.activate(self.topic)
             if synchronize_with_ariane_dbs and self.system_gear_actor_ref is not None:

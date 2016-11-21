@@ -21,6 +21,7 @@ import threading
 import time
 import timeit
 import traceback
+from ariane_clip3.exceptions import ArianeMessagingTimeoutError
 from ariane_clip3.mapping import ContainerService, Container, NodeService, Node, Endpoint, EndpointService, Transport, \
     Link, LinkService, SessionService
 from ariane_clip3.directory import LocationService, Location, RoutingAreaService, RoutingArea, OSInstanceService,\
@@ -1515,12 +1516,19 @@ class MappingGear(InjectorGearSkeleton):
                 SessionService.close_session()
                 sync_proc_time = timeit.default_timer()-start_time
                 LOGGER.info('MappingGear.synchronize_with_ariane_mapping - time : ' + str(sync_proc_time))
+            except ArianeMessagingTimeoutError as e:
+                LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + e.__str__())
+                LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + traceback.format_exc())
+                LOGGER.error("MappingGear.synchronize_with_ariane_mapping - rollback to previous state")
+                component.rollback().get()
             except Exception as e:
                 LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + e.__str__())
                 LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + traceback.format_exc())
                 try:
+                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - rollback to previous state")
                     SessionService.rollback()
                     SessionService.close_session()
+                    component.rollback().get()
                 except Exception as e:
                     LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + e.__str__())
                     LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + traceback.format_exc())
