@@ -761,9 +761,21 @@ class MappingGear(InjectorGearSkeleton):
             LOGGER.info('procos_mapping_gear@' + str(SystemGear.hostname) + ' has been stopped.')
 
     @staticmethod
+    def diff_container_network_location(container, location):
+        return (
+            container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_NAME_MAPPING_FIELD] != location.name or
+            container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_ADDR_MAPPING_FIELD] != location.address or
+            container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_TOWN_MAPPING_FIELD] != location.town or
+            container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_CNTY_MAPPING_FIELD] != location.country or
+            container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_GPSA_MAPPING_FIELD] != location.gpsLatitude or
+            container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_GPSN_MAPPING_FIELD] != location.gpsLongitude
+        )
+
+    @staticmethod
     def sync_container_network(container, location, routing_areas, subnets):
         LOGGER.debug("MappingGear.sync_container_network")
-        if location is not None:
+
+        if location is not None and MappingGear.diff_container_network_location(container, location):
             location_properties = {
                 Container.PL_NAME_MAPPING_FIELD: location.name,
                 Container.PL_ADDR_MAPPING_FIELD: location.address,
@@ -807,11 +819,19 @@ class MappingGear(InjectorGearSkeleton):
             if network_properties.__len__() > 0:
                 container.add_property((Container.NETWORK_MAPPING_PROPERTIES, network_properties))
 
-    def sync_container_properties(self):
+    @staticmethod
+    def diff_container_team(container, team):
+        return (
+            container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][Container.TEAM_NAME_MAPPING_FIELD] != team.name or
+            container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][Container.TEAM_COLR_MAPPING_FIELD] != team.color_code
+        )
+
+    def sync_container_properties(self, operating_system):
         LOGGER.debug("MappingGear.sync_container_properties - begin")
-        self.sync_container_network(self.osi_container, SystemGear.location, SystemGear.routing_areas,
-                                    SystemGear.subnets)
-        if SystemGear.team is not None:
+        if operating_system.last_nics != operating_system.nics:
+            self.sync_container_network(self.osi_container, SystemGear.location, SystemGear.routing_areas,
+                                        SystemGear.subnets)
+        if SystemGear.team is not None and MappingGear.diff_container_team(self.osi_container, SystemGear.team):
             team_properties = {
                 Container.TEAM_NAME_MAPPING_FIELD: SystemGear.team.name,
                 Container.TEAM_COLR_MAPPING_FIELD: SystemGear.team.color_code
@@ -845,7 +865,8 @@ class MappingGear(InjectorGearSkeleton):
             operating_system.container_id = self.osi_container.id
             LOGGER.debug('operating_system.container_id : (' + str(SystemGear.hostname) + ',' +
                          str(operating_system.container_id) + ')')
-        self.sync_container_properties()
+
+        self.sync_container_properties(operating_system)
         LOGGER.debug("MappingGear.sync_container - done")
 
     @staticmethod
@@ -1516,11 +1537,6 @@ class MappingGear(InjectorGearSkeleton):
                 SessionService.close_session()
                 sync_proc_time = timeit.default_timer()-start_time
                 LOGGER.info('MappingGear.synchronize_with_ariane_mapping - time : ' + str(sync_proc_time))
-            except ArianeMessagingTimeoutError as e:
-                LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + e.__str__())
-                LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + traceback.format_exc())
-                LOGGER.error("MappingGear.synchronize_with_ariane_mapping - rollback to previous state")
-                component.rollback().get()
             except Exception as e:
                 LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + e.__str__())
                 LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + traceback.format_exc())
