@@ -762,14 +762,17 @@ class MappingGear(InjectorGearSkeleton):
 
     @staticmethod
     def diff_container_network_location(container, location):
-        return (
-            container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_NAME_MAPPING_FIELD] != location.name or
-            container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_ADDR_MAPPING_FIELD] != location.address or
-            container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_TOWN_MAPPING_FIELD] != location.town or
-            container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_CNTY_MAPPING_FIELD] != location.country or
-            container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_GPSA_MAPPING_FIELD] != location.gpsLatitude or
-            container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_GPSN_MAPPING_FIELD] != location.gpsLongitude
-        )
+        if Container.PL_MAPPING_PROPERTIES in container.properties:
+            return (
+                container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_NAME_MAPPING_FIELD] != location.name or
+                container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_ADDR_MAPPING_FIELD] != location.address or
+                container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_TOWN_MAPPING_FIELD] != location.town or
+                container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_CNTY_MAPPING_FIELD] != location.country or
+                container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_GPSA_MAPPING_FIELD] != location.gpsLatitude or
+                container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_GPSN_MAPPING_FIELD] != location.gpsLongitude
+            )
+        else:
+            return False
 
     @staticmethod
     def sync_container_network(container, location, routing_areas, subnets):
@@ -821,10 +824,13 @@ class MappingGear(InjectorGearSkeleton):
 
     @staticmethod
     def diff_container_team(container, team):
-        return (
-            container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][Container.TEAM_NAME_MAPPING_FIELD] != team.name or
-            container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][Container.TEAM_COLR_MAPPING_FIELD] != team.color_code
-        )
+        if Container.TEAM_SUPPORT_MAPPING_PROPERTIES in container.properties:
+            return (
+                container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][Container.TEAM_NAME_MAPPING_FIELD] != team.name or
+                container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][Container.TEAM_COLR_MAPPING_FIELD] != team.color_code
+            )
+        else:
+            return False
 
     def sync_container_properties(self, operating_system):
         LOGGER.debug("MappingGear.sync_container_properties - begin")
