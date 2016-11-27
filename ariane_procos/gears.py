@@ -682,7 +682,7 @@ class DirectoryGear(InjectorGearSkeleton):
             LOGGER.info('DirectoryGear.init_ariane_directories - time : ' + str(sync_proc_time))
         except Exception as e:
             LOGGER.error("DirectoryGear.init_ariane_directories - " + e.__str__())
-            LOGGER.error("DirectoryGear.init_ariane_directories - " + traceback.format_exc())
+            LOGGER.debug("DirectoryGear.init_ariane_directories - " + traceback.format_exc())
 
     def update_ariane_directories(self, operating_system):
         LOGGER.debug("DirectoryGear.update_ariane_directories")
@@ -697,7 +697,7 @@ class DirectoryGear(InjectorGearSkeleton):
                     LOGGER.debug('DirectoryGear.update_ariane_directories - no changes with last sniff')
             except Exception as e:
                 LOGGER.error("DirectoryGear.update_ariane_directories - " + e.__str__())
-                LOGGER.error("DirectoryGear.update_ariane_directories - " + traceback.format_exc())
+                LOGGER.debug("DirectoryGear.update_ariane_directories - " + traceback.format_exc())
         else:
             LOGGER.warn('DirectoryGear.update_ariane_directories - DIRECTORIES SYNC ARE IGNORED')
 
@@ -728,6 +728,7 @@ class MappingGear(InjectorGearSkeleton):
         )
         self.update_count = 0
         self.osi_container = None
+        self.init_done = False
 
     def on_start(self):
         LOGGER.debug("MappingGear.on_start")
@@ -772,13 +773,13 @@ class MappingGear(InjectorGearSkeleton):
                 container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_GPSN_MAPPING_FIELD] != location.gpsLongitude
             )
         else:
-            return False
+            return True
 
     @staticmethod
     def sync_container_network(container, location, routing_areas, subnets):
         LOGGER.debug("MappingGear.sync_container_network")
-
         if location is not None and MappingGear.diff_container_network_location(container, location):
+            LOGGER.debug("MappingGear.sync_container_network - add location property")
             location_properties = {
                 Container.PL_NAME_MAPPING_FIELD: location.name,
                 Container.PL_ADDR_MAPPING_FIELD: location.address,
@@ -820,21 +821,29 @@ class MappingGear(InjectorGearSkeleton):
                         })
 
             if network_properties.__len__() > 0:
+                LOGGER.debug("MappingGear.sync_container_network - add network property")
                 container.add_property((Container.NETWORK_MAPPING_PROPERTIES, network_properties))
 
     @staticmethod
     def diff_container_team(container, team):
         if Container.TEAM_SUPPORT_MAPPING_PROPERTIES in container.properties:
-            return (
-                container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][Container.TEAM_NAME_MAPPING_FIELD] != team.name or
-                container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][Container.TEAM_COLR_MAPPING_FIELD] != team.color_code
-            )
+            try:
+                ret = container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][Container.TEAM_NAME_MAPPING_FIELD] != team.name or \
+                    container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][Container.TEAM_COLR_MAPPING_FIELD] != team.color_code
+                return ret
+            except Exception as e:
+                try:
+                    ret = container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][0][Container.TEAM_NAME_MAPPING_FIELD][1] != team.name or \
+                        container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][0][Container.TEAM_COLR_MAPPING_FIELD][1] != team.color_code
+                    return ret
+                except Exception as e:
+                    return True
         else:
-            return False
+            return True
 
     def sync_container_properties(self, operating_system):
         LOGGER.debug("MappingGear.sync_container_properties - begin")
-        if operating_system.last_nics != operating_system.nics:
+        if not self.init_done or operating_system.last_nics != operating_system.nics:
             self.sync_container_network(self.osi_container, SystemGear.location, SystemGear.routing_areas,
                                         SystemGear.subnets)
         if SystemGear.team is not None and MappingGear.diff_container_team(self.osi_container, SystemGear.team):
@@ -842,6 +851,7 @@ class MappingGear(InjectorGearSkeleton):
                 Container.TEAM_NAME_MAPPING_FIELD: SystemGear.team.name,
                 Container.TEAM_COLR_MAPPING_FIELD: SystemGear.team.color_code
             }
+            LOGGER.debug("MappingGear.sync_container_network - add team property")
             self.osi_container.add_property((Container.TEAM_SUPPORT_MAPPING_PROPERTIES, team_properties))
         LOGGER.debug("MappingGear.sync_container_properties - done")
 
@@ -1083,6 +1093,9 @@ class MappingGear(InjectorGearSkeleton):
                                     source_endpoint.add_property(('status', map_socket.status))
                                     source_endpoint.add_property(('file descriptors', map_socket.file_descriptors))
                                     source_endpoint.save()
+                                else:
+                                    LOGGER.debug("Found source endpoint : (" +
+                                                source_url + ',' + str(source_endpoint.id) + ")")
                                 if source_endpoint.id not in operating_system.duplex_links_endpoints \
                                         and destination_is_local:
                                     operating_system.duplex_links_endpoints.append(source_endpoint.id)
@@ -1533,7 +1546,7 @@ class MappingGear(InjectorGearSkeleton):
         if self.running:
             try:
                 start_time = timeit.default_timer()
-                SessionService.open_session("ArianeProcOS" + socket.gethostname())
+                SessionService.open_session("ArianeProcOS_" + socket.gethostname())
                 operating_system = component.operating_system.get()
                 self.sync_container(operating_system)
                 self.sync_processs(operating_system)
@@ -1543,17 +1556,35 @@ class MappingGear(InjectorGearSkeleton):
                 SessionService.close_session()
                 sync_proc_time = timeit.default_timer()-start_time
                 LOGGER.info('MappingGear.synchronize_with_ariane_mapping - time : ' + str(sync_proc_time))
+                if not self.init_done:
+                    self.init_done = True
             except Exception as e:
                 LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + e.__str__())
                 LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + traceback.format_exc())
                 try:
-                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - rollback to previous state")
+                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - mapping rollback to previous state")
                     SessionService.rollback()
+                except Exception as e:
+                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - exception on mapping rollback : " +
+                                 e.__str__())
+                    LOGGER.debug("MappingGear.synchronize_with_ariane_mapping - exception on mapping rollback : " +
+                                 traceback.format_exc())
+                try:
+                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - mapping session close")
                     SessionService.close_session()
+                except Exception as e:
+                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - exception on mapping session closing : "
+                                 + e.__str__())
+                    LOGGER.debug("MappingGear.synchronize_with_ariane_mapping - exception on mapping session closing : "
+                                 + traceback.format_exc())
+                try:
+                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - injector cache rollback")
                     component.rollback().get()
                 except Exception as e:
-                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + e.__str__())
-                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + traceback.format_exc())
+                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - exception on injector cache rollback : "
+                                 + e.__str__())
+                    LOGGER.debug("MappingGear.synchronize_with_ariane_mapping - exception on injector cache rollback : "
+                                 + traceback.format_exc())
         else:
             LOGGER.warn('Synchronization requested but procos_mapping_gear@' + str(SystemGear.hostname) +
                         ' is not running.')
@@ -1656,7 +1687,7 @@ class SystemGear(InjectorGearSkeleton):
             SystemGear.domino_activator.stop()
         except Exception as e:
             LOGGER.error(e.__str__())
-            LOGGER.error(traceback.format_exc())
+            LOGGER.debug(traceback.format_exc())
 
     def on_failure(self, exception_type, exception_value, traceback_):
         LOGGER.debug("SystemGear.on_failure")
@@ -1674,7 +1705,7 @@ class SystemGear(InjectorGearSkeleton):
             SystemGear.domino_activator.stop()
         except Exception as e:
             LOGGER.error(e.__str__())
-            LOGGER.error(traceback.format_exc())
+            LOGGER.debug(traceback.format_exc())
 
     def gear_start(self):
         LOGGER.debug("SystemGear.gear_start")

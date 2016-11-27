@@ -19,6 +19,7 @@ import datetime
 import json
 import logging
 import socket
+import timeit
 import traceback
 from ariane_clip3.injector import InjectorComponentSkeleton, InjectorCachedComponent
 from ariane_procos.system import OperatingSystem
@@ -64,7 +65,7 @@ class SystemComponent(InjectorComponentSkeleton):
 
     def sniff(self, synchronize_with_ariane_dbs=True):
         try:
-            LOGGER.info("SystemComponent.sniff")
+            start_time = timeit.default_timer()
             self.cache(refreshing=True, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
             self.operating_system.update()
             self.cache(
@@ -72,9 +73,11 @@ class SystemComponent(InjectorComponentSkeleton):
                 data_blob=self.data_blob(), rollback_point=True
             )
             self.version += 1
+            sniff_time = timeit.default_timer()-start_time
+            LOGGER.info("SystemComponent.sniff - time : " + str(sniff_time))
             self.domino.activate(self.topic)
             if synchronize_with_ariane_dbs and self.system_gear_actor_ref is not None:
                 self.system_gear_actor_ref.proxy().synchronize_with_ariane_dbs()
         except Exception as e:
-            LOGGER.error(e.__str__())
-            LOGGER.error(traceback.format_exc())
+            LOGGER.error("SystemComponent.sniff - exception raised : " + e.__str__())
+            LOGGER.debug("SystemComponent.sniff - exception raised : " + traceback.format_exc())
