@@ -55,8 +55,8 @@ class ArianeConnector(object):
             'password': procos_config.nats_password,
             'host': procos_config.nats_host,
             'port': procos_config.nats_port,
-            'rpc_timeout': procos_config.nats_rpc_timeout,
-            'rpc_retry': procos_config.nats_rpc_retry,
+            'rpc_timeout': procos_config.rpc_timeout,
+            'rpc_retry': procos_config.rpc_retry,
             'client_properties': client_properties
         }
         rbmq_args = {
@@ -66,6 +66,8 @@ class ArianeConnector(object):
             'host': procos_config.rbmq_host,
             'port': procos_config.rbmq_port,
             'vhost': procos_config.rbmq_vhost,
+            'rpc_timeout': procos_config.rpc_timeout,
+            'rpc_retry': procos_config.rpc_retry,
             'client_properties': client_properties
         }
         self.gears_registry_cache_id = 'ariane.community.plugin.procos.gears.cache'
