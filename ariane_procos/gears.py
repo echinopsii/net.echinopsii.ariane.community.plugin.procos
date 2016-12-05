@@ -1488,12 +1488,13 @@ class MappingGear(InjectorGearSkeleton):
             if process.cpu_affinity is not None:
                 process_map_obj.add_property(('cpu_affinity', process.cpu_affinity), sync=False)
             process_map_obj.save()
-            for cmdline_part in process.cmdline:
-                if "-pass" in cmdline_part or "-pwd" in cmdline_part:
-                    pass_index = process.cmdline.index(cmdline_part)
-                    if pass_index + 1 < process.cmdline.__len__():
-                        process.cmdline[pass_index+1] = "*****"
-            process_map_obj.add_property(('cmdline', process.cmdline))
+            if process.cmdline.__len__() > 0:
+                for cmdline_part in process.cmdline:
+                    if "-pass" in cmdline_part or "-pwd" in cmdline_part:
+                        pass_index = process.cmdline.index(cmdline_part)
+                        if pass_index + 1 < process.cmdline.__len__():
+                            process.cmdline[pass_index+1] = "*****"
+                process_map_obj.add_property(('cmdline', process.cmdline))
             process.mapping_id = process_map_obj.id
             LOGGER.debug('MappingGear.sync_processs - new process on mapping db : (' + name + ',' +
                          str(process.mapping_id) + ')')
