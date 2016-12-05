@@ -72,16 +72,16 @@ class ArianeConnector(object):
         }
         self.gears_registry_cache_id = 'ariane.community.plugin.procos.gears.cache'
         procos_gears_registry_conf = {
-            'registry.name': 'Ariane ProcOS plugin gears registry',
+            'registry.name': 'Ariane ProcOS Plugin Gears Registry',
             'registry.cache.id': self.gears_registry_cache_id,
-            'registry.cache.name': 'Ariane ProcOS plugin gears cache',
+            'registry.cache.name': 'Ariane ProcOS Plugin Gears Cache',
             'cache.mgr.name': 'ARIANE_PLUGIN_PROCOS_GEARS_CACHE_MGR'
         }
         self.components_registry_cache_id = 'ariane.community.plugin.procos.components.cache'
         procos_components_registry_conf = {
-            'registry.name': 'Ariane ProcOS plugin components registry',
+            'registry.name': 'Ariane ProcOS Plugin Components Registry',
             'registry.cache.id': self.components_registry_cache_id,
-            'registry.cache.name': 'Ariane ProcOS plugin components cache',
+            'registry.cache.name': 'Ariane ProcOS Plugin Components Cache',
             'cache.mgr.name': 'ARIANE_PLUGIN_PROCOS_COMPONENTS_CACHE_MGR'
         }
 
