@@ -360,41 +360,48 @@ class OperatingSystem(object):
     def __str__(self):
         return json.dumps(self.operating_system_2_json())
 
-    def is_local_destination(self, mapping_socket):
-        LOGGER.debug("OperatingSystem.is_local_destination")
-        destination_is_local = False
+    def is_local(self, ip, family):
+        is_local = False
 
-        if mapping_socket.destination_ip is not None and mapping_socket.family == "AF_INET":
+        if ip is not None and family == "AF_INET":
             for nic in self.nics:
                 if nic.in_local_routingarea and NetworkInterfaceCard.ip_is_in_subnet(
-                        mapping_socket.destination_ip,nic.ipv4_subnet_addr, nic.ipv4_subnet_mask
+                        ip, nic.ipv4_subnet_addr, nic.ipv4_subnet_mask
                 ):
-                    destination_is_local = True
+                    is_local = True
                     break
 
-        elif mapping_socket.destination_ip is not None and mapping_socket.family == "AF_INET6":
-            destination_ipv4 = MapSocket.ipv6_2_ipv4(mapping_socket.destination_ip)
-            if destination_ipv4 != mapping_socket.destination_ip:
+        elif ip is not None and family == "AF_INET6":
+            destination_ipv4 = MapSocket.ipv6_2_ipv4(ip)
+            if destination_ipv4 != ip:
                 for nic in self.nics:
                     if nic.in_local_routingarea and NetworkInterfaceCard.ip_is_in_subnet(
                             destination_ipv4, nic.ipv4_subnet_addr, nic.ipv4_subnet_mask
                     ):
-                        destination_is_local = True
+                        is_local = True
                         break
             else:
                 # TODO: check is ipv6 in subnet ?
                 for nic in self.nics:
                     if nic.in_local_routingarea and nic.ipv6_address is not None and \
-                            mapping_socket.destination_ip == nic.ipv6_address:
-                        destination_is_local = True
+                                    ip == nic.ipv6_address:
+                        is_local = True
                         break
 
-        elif mapping_socket.family == "AF_UNIX":
-            destination_is_local = True
+        elif family == "AF_UNIX":
+            is_local = True
 
-        LOGGER.debug(str(mapping_socket.destination_ip) + " is local: " + str(destination_is_local))
+        LOGGER.debug(str(ip) + " is local: " + str(is_local))
 
-        return destination_is_local
+        return is_local
+
+    def is_local_destination(self, mapping_socket):
+        LOGGER.debug("OperatingSystem.is_local_destination")
+        return self.is_local(mapping_socket.destination_ip, mapping_socket.family)
+
+    def is_local_service(self, mapping_socket):
+        LOGGER.debug("OperatingSystem.is_local_service")
+        return self.is_local(mapping_socket.source_ip, mapping_socket.family)
 
     def need_directories_refresh(self):
         LOGGER.debug("OperatingSystem.need_directories_refresh")
