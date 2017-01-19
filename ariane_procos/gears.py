@@ -1213,14 +1213,24 @@ class MappingGear(InjectorGearSkeleton):
                                         target_container.save()
 
                                     if not destination_is_local:
-                                        # TODO
-                                        # selector = "endpointURL =~ '" + target_url + ".*'"
-                                        # endpoints = EndpointService.find_endpoint(selector=selector)
+                                        selector = "endpointURL =~ '.*:" + str(map_socket.destination_port) + " .*'"
 
-                                        target_node = NodeService.find_node(
-                                            endpoint_url=target_url
+                                        endpoints = EndpointService.find_endpoint(
+                                            selector=selector,
+                                            cid=target_container.id
                                         )
-                                        if target_node is None:
+
+                                        if endpoints is not None and endpoints.__len__() == 1:
+                                            target_endpoint = endpoints[0]
+                                            target_node = NodeService.find_node(nid=target_endpoint.parent_node_id)
+                                        elif endpoints is not None and endpoints.__len__() > 1:
+                                            LOGGER.debug("Multiple endpoints found for selector " + selector +
+                                                         " on container " + target_container.id)
+                                        elif (endpoints is not None and endpoints.__len__() == 0) or endpoints is None:
+                                            LOGGER.debug("No endpoint found for selector " + selector +
+                                                         " on container " + target_container.id)
+
+                                        if target_endpoint is not None:
                                             addr = target_fqdn if target_fqdn is not None else map_socket.destination_ip
                                             target_node = Node(
                                                 name=addr + ':' + str(map_socket.destination_port),
@@ -1229,14 +1239,10 @@ class MappingGear(InjectorGearSkeleton):
                                             )
                                             target_node.save()
 
-                                        target_endpoint = EndpointService.find_endpoint(
-                                            url=target_url
-                                        )
-                                        if target_endpoint is None:
                                             target_endpoint = Endpoint(
                                                 url=target_url, parent_node_id=target_node.id, ignore_sync=True
                                             )
-                                        target_endpoint.save()
+                                            target_endpoint.save()
                                     else:
                                         for proc_srv in operating_system.processs:
                                             for srv_socket in proc_srv.map_sockets:
