@@ -1230,7 +1230,7 @@ class MappingGear(InjectorGearSkeleton):
                                             LOGGER.debug("No endpoint found for selector " + selector +
                                                          " on container " + target_container.id)
 
-                                        if target_endpoint is not None:
+                                        if target_endpoint is None:
                                             addr = target_fqdn if target_fqdn is not None else map_socket.destination_ip
                                             target_node = Node(
                                                 name=addr + ':' + str(map_socket.destination_port),
