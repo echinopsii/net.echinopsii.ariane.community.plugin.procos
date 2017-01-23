@@ -853,6 +853,10 @@ class MappingGear(InjectorGearSkeleton):
             }
             LOGGER.debug("MappingGear.sync_container_network - add team property")
             self.osi_container.add_property((Container.TEAM_SUPPORT_MAPPING_PROPERTIES, team_properties))
+        self.osi_container.add_property((
+            Container.OWNER_MAPPING_PROPERTY,
+            'procos_system_gear@'+str(SystemGear.hostname)
+        ))
         LOGGER.debug("MappingGear.sync_container_properties - done")
 
     def sync_container(self, operating_system):
@@ -868,6 +872,20 @@ class MappingGear(InjectorGearSkeleton):
             LOGGER.debug("MappingGear.sync_container - FQDN : " + str(SystemGear.fqdn))
             if SystemGear.fqdn is None:
                 SystemGear.fqdn = SystemGear.hostname
+            existing_container = ContainerService.find_container(
+                primary_admin_gate_url=SystemGear.config.system_context.admin_gate_protocol+SystemGear.fqdn
+            )
+            if existing_container is not None:
+                deleted = False
+                while not deleted:
+                    if existing_container is not None and existing_container.remove() is not None:
+                        time.sleep(5)
+                        existing_container = ContainerService.find_container(
+                            primary_admin_gate_url=SystemGear.config.system_context.admin_gate_protocol+SystemGear.fqdn
+                        )
+                    else:
+                        deleted = True
+
             self.osi_container = Container(
                 name=SystemGear.hostname,
                 gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.fqdn,
@@ -1205,15 +1223,19 @@ class MappingGear(InjectorGearSkeleton):
                                             MappingGear.sync_remote_container_team(target_os_instance,
                                                                                    target_container)
                                     if target_container is None:
-                                        target_container = Container(
-                                            name=target_fqdn if target_fqdn is not None else map_socket.destination_ip,
-                                            gate_uri="not_my_concern://"+map_socket.destination_ip,
-                                            primary_admin_gate_name="External OS Primary Admin Gate"
+                                        target_container = ContainerService.find_container(
+                                            primary_admin_gate_url="not_my_concern://"+map_socket.destination_ip
                                         )
-                                        target_container.save()
+                                        if target_container is None:
+                                            target_container = Container(
+                                                name=target_fqdn if target_fqdn is not None else map_socket.destination_ip,
+                                                gate_uri="not_my_concern://"+map_socket.destination_ip,
+                                                primary_admin_gate_name="External OS Primary Admin Gate"
+                                            )
+                                            target_container.save()
 
                                     if not destination_is_local:
-                                        selector = "endpointURL =~ '.*:" + str(map_socket.destination_port) + " .*'"
+                                        selector = "endpointURL =~ '.*:" + str(map_socket.destination_port) + ".*'"
 
                                         endpoints = EndpointService.find_endpoint(
                                             selector=selector,
@@ -1224,16 +1246,22 @@ class MappingGear(InjectorGearSkeleton):
                                             target_endpoint = endpoints[0]
                                             target_node = NodeService.find_node(nid=target_endpoint.parent_node_id)
                                         elif endpoints is not None and endpoints.__len__() > 1:
-                                            LOGGER.debug("Multiple endpoints found for selector " + selector +
+                                            LOGGER.debug("MappingGear.sync_map_socket - "
+                                                         "Multiple endpoints found for selector " + selector +
                                                          " on container " + target_container.id)
                                         elif (endpoints is not None and endpoints.__len__() == 0) or endpoints is None:
-                                            LOGGER.debug("No endpoint found for selector " + selector +
+                                            LOGGER.debug("MappingGear.sync_map_socket - "
+                                                         "No endpoint found for selector " + selector +
                                                          " on container " + target_container.id)
 
-                                        if target_endpoint is None:
+                                        if target_endpoint is None and \
+                                                Container.OWNER_MAPPING_PROPERTY not in target_container.properties:
                                             addr = target_fqdn if target_fqdn is not None else map_socket.destination_ip
+                                            node_name = addr + ':' + str(map_socket.destination_port)
+                                            LOGGER.debug("create node " + node_name + " through container " +
+                                                         target_container.id)
                                             target_node = Node(
-                                                name=addr + ':' + str(map_socket.destination_port),
+                                                name=node_name,
                                                 container_id=target_container.id,
                                                 ignore_sync=True
                                             )
@@ -1264,6 +1292,7 @@ class MappingGear(InjectorGearSkeleton):
                                                         LOGGER.warn("MappingGear.sync_map_socket - process as container"
                                                                     " not yet implemented !")
                                                     target_url += str(srv_socket.file_descriptors)
+                                                    target_url += '[' + str(proc_srv.pid) + ']'
                                                     if target_node is not None:
                                                         target_endpoint = EndpointService.find_endpoint(
                                                             url=target_url
@@ -1391,9 +1420,14 @@ class MappingGear(InjectorGearSkeleton):
                                     else:
                                         LOGGER.debug('MappingGear.sync_map_socket - missing destination endpoint id '
                                                      'for ' + str(map_socket))
+                                if not destination_is_local:
+                                    # RELEASE LOCK ON SHARED OBJECTS ASAP
+                                    SessionService.commit()
 
                     else:
                         LOGGER.debug('MappingGear.sync_map_socket - no source ip / port - ' + str(map_socket))
+                if proc.new_map_sockets.__len__() > 0:
+                    SessionService.commit()
 
             if proc.mapping_id is not None and proc.dead_map_sockets is not None:
                 if proc.name != "exe":
@@ -1464,6 +1498,8 @@ class MappingGear(InjectorGearSkeleton):
                             map_socket.destination_endpoint_id in operating_system.wip_delete_duplex_links_endpoints:
                         operating_system.wip_delete_duplex_links_endpoints.remove(map_socket.destination_endpoint_id)
                         operating_system.duplex_links_endpoints.remove(map_socket.destination_endpoint_id)
+                if proc.dead_map_sockets.__len__() > 0:
+                    SessionService.commit()
 
         sync_proc_time = timeit.default_timer()-start_time
         LOGGER.debug('MappingGear.sync_map_socket - time : ' + str(sync_proc_time))
@@ -1548,6 +1584,8 @@ class MappingGear(InjectorGearSkeleton):
             process.mapping_id = process_map_obj.id
             LOGGER.debug('MappingGear.sync_processs - new process on mapping db : (' + name + ',' +
                          str(process.mapping_id) + ')')
+        if operating_system.new_processs.__len__() > 0:
+            SessionService.commit()
 
         LOGGER.debug("MappingGear.sync_processs - " + str(operating_system.dead_processs.__len__()) +
                      ' old processes found')
@@ -1587,6 +1625,8 @@ class MappingGear(InjectorGearSkeleton):
                                  name + ',' + str(process.mapping_id) + ')')
                 else:
                     process_map_obj.remove()
+        if operating_system.dead_processs.__len__() > 0:
+            SessionService.commit()
 
         sync_proc_time = timeit.default_timer()-start_time
         LOGGER.debug('MappingGear.sync_processs - time : ' + str(sync_proc_time))
@@ -1597,9 +1637,10 @@ class MappingGear(InjectorGearSkeleton):
         if self.running:
             try:
                 start_time = timeit.default_timer()
-                SessionService.open_session("ArianeProcOS_" + socket.gethostname())
                 operating_system = component.operating_system.get()
+                # SessionService.open_session("ArianeProcOS_" + socket.gethostname())
                 self.sync_container(operating_system)
+                SessionService.open_session("ArianeProcOS_" + socket.gethostname())
                 self.sync_processs(operating_system)
                 self.sync_map_socket(operating_system)
                 SessionService.commit()
