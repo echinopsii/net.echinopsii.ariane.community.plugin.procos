@@ -19,10 +19,8 @@ import copy
 from ipaddress import ip_network, IPv4Address
 import json
 import logging
-import os
 import re
 import socket
-import struct
 import netifaces
 import psutil
 
@@ -60,6 +58,8 @@ class MapSocket(object):
 
     def __str__(self):
         return json.dumps(self.to_json())
+
+    __repr__ = __str__
 
     def __eq__(self, other):
         if self.family != other.family or self.type != other.type or self.source_ip != other.source_ip\
@@ -193,6 +193,8 @@ class Process(object):
     def __str__(self):
         return json.dumps(self.proc_2_json())
 
+    __repr__ = __str__
+
     def proc_2_json(self):
         map_sockets_json = []
         if self.map_sockets is not None:
@@ -268,6 +270,8 @@ class NetworkInterfaceCard(object):
 
     def __str__(self):
         return json.dumps(self.to_json())
+
+    __repr__ = __str__
 
     def to_json(self):
         json_obj = {
@@ -359,6 +363,8 @@ class OperatingSystem(object):
 
     def __str__(self):
         return json.dumps(self.operating_system_2_json())
+
+    __repr__ = __str__
 
     def is_local(self, ip, family):
         is_local = False

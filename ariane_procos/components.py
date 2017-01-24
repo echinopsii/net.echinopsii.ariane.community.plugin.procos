@@ -65,6 +65,8 @@ class SystemComponent(InjectorComponentSkeleton):
 
     def sniff(self, synchronize_with_ariane_dbs=True):
         try:
+            LOGGER.debug("SystemComponent.sniff - activate " + self.topic)
+            self.domino.activate(self.topic)
             start_time = timeit.default_timer()
             self.cache(refreshing=True, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
             self.operating_system.update()
@@ -75,7 +77,6 @@ class SystemComponent(InjectorComponentSkeleton):
             self.version += 1
             sniff_time = timeit.default_timer()-start_time
             LOGGER.info("SystemComponent.sniff - time : " + str(sniff_time))
-            self.domino.activate(self.topic)
             if synchronize_with_ariane_dbs and self.system_gear_actor_ref is not None:
                 self.system_gear_actor_ref.proxy().synchronize_with_ariane_dbs()
         except Exception as e:

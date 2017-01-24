@@ -1648,6 +1648,9 @@ class MappingGear(InjectorGearSkeleton):
                 SessionService.close_session()
                 sync_proc_time = timeit.default_timer()-start_time
                 LOGGER.info('MappingGear.synchronize_with_ariane_mapping - time : ' + str(sync_proc_time))
+                LOGGER.debug("MappingGear.synchronize_with_ariane_mapping - activate " +
+                             SystemGear.domino_ariane_sync_topic)
+                SystemGear.domino_activator.activate(SystemGear.domino_ariane_sync_topic)
                 if not self.init_done:
                     self.init_done = True
             except Exception as e:
@@ -1733,20 +1736,17 @@ class SystemGear(InjectorGearSkeleton):
         self.mapping_gear = MappingGear.start().proxy()
 
     def synchronize_with_ariane_dbs(self):
-        LOGGER.debug("SystemGear.synchronize_with_ariane_dbs")
+        LOGGER.debug("SystemGear.synchronize_with_ariane_dbs - sync db")
         self.directory_gear.synchronize_with_ariane_directories(self.component)
         self.mapping_gear.synchronize_with_ariane_mapping(self.component)
-        SystemGear.domino_activator.activate(SystemGear.domino_ariane_sync_topic)
 
     def init_with_ariane_dbs(self):
-        LOGGER.debug("SystemGear.init_with_ariane_dbs")
-        LOGGER.info("Initializing...")
+        LOGGER.debug("SystemGear.init_with_ariane_dbs - Initializing...")
         self.directory_gear.init_ariane_directories(self.component).get()
         self.component.sniff(synchronize_with_ariane_dbs=False).get()
         self.directory_gear.synchronize_with_ariane_directories(self.component).get()
         self.mapping_gear.synchronize_with_ariane_mapping(self.component).get()
-        LOGGER.info("Initialization done.")
-        SystemGear.domino_activator.activate(SystemGear.domino_ariane_sync_topic)
+        LOGGER.info("SystemGear.init_with_ariane_dbs - Initialization done.")
 
     def run(self):
         LOGGER.debug("SystemGear.run")
