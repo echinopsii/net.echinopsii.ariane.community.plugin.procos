@@ -1420,14 +1420,9 @@ class MappingGear(InjectorGearSkeleton):
                                     else:
                                         LOGGER.debug('MappingGear.sync_map_socket - missing destination endpoint id '
                                                      'for ' + str(map_socket))
-                                if not destination_is_local:
-                                    # RELEASE LOCK ON SHARED OBJECTS ASAP
-                                    SessionService.commit()
 
                     else:
                         LOGGER.debug('MappingGear.sync_map_socket - no source ip / port - ' + str(map_socket))
-                if proc.new_map_sockets.__len__() > 0:
-                    SessionService.commit()
 
             if proc.mapping_id is not None and proc.dead_map_sockets is not None:
                 if proc.name != "exe":
@@ -1498,8 +1493,6 @@ class MappingGear(InjectorGearSkeleton):
                             map_socket.destination_endpoint_id in operating_system.wip_delete_duplex_links_endpoints:
                         operating_system.wip_delete_duplex_links_endpoints.remove(map_socket.destination_endpoint_id)
                         operating_system.duplex_links_endpoints.remove(map_socket.destination_endpoint_id)
-                if proc.dead_map_sockets.__len__() > 0:
-                    SessionService.commit()
 
         sync_proc_time = timeit.default_timer()-start_time
         LOGGER.debug('MappingGear.sync_map_socket - time : ' + str(sync_proc_time))
@@ -1584,8 +1577,6 @@ class MappingGear(InjectorGearSkeleton):
             process.mapping_id = process_map_obj.id
             LOGGER.debug('MappingGear.sync_processs - new process on mapping db : (' + name + ',' +
                          str(process.mapping_id) + ')')
-        if operating_system.new_processs.__len__() > 0:
-            SessionService.commit()
 
         LOGGER.debug("MappingGear.sync_processs - " + str(operating_system.dead_processs.__len__()) +
                      ' old processes found')
@@ -1625,8 +1616,6 @@ class MappingGear(InjectorGearSkeleton):
                                  name + ',' + str(process.mapping_id) + ')')
                 else:
                     process_map_obj.remove()
-        if operating_system.dead_processs.__len__() > 0:
-            SessionService.commit()
 
         sync_proc_time = timeit.default_timer()-start_time
         LOGGER.debug('MappingGear.sync_processs - time : ' + str(sync_proc_time))
