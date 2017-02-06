@@ -910,6 +910,11 @@ class MappingGear(InjectorGearSkeleton):
         target_routing_areas = []
         target_subnets = []
 
+        if Container.PL_MAPPING_PROPERTIES in target_container.properties and \
+           Container.NETWORK_MAPPING_PROPERTIES in target_container.properties:
+            LOGGER.debug("MappingGear.sync_remote_container_network - network already defined for remote container.")
+            return
+
         for subnet_id in target_os_instance.subnet_ids:
             target_subnet = SubnetService.find_subnet(
                 sb_id=subnet_id
@@ -940,6 +945,11 @@ class MappingGear(InjectorGearSkeleton):
     @staticmethod
     def sync_remote_container_team(target_os_instance, target_container):
         LOGGER.debug("MappingGear.sync_remote_container_team - begin")
+
+        if Container.TEAM_SUPPORT_MAPPING_PROPERTIES in target_container.properties:
+            LOGGER.debug("MappingGear.sync_remote_container_network - team already defined for remote container.")
+            return
+
         teams_props = []
         for team_id in target_os_instance.team_ids:
             team = TeamService.find_team(team_id)
