@@ -18,6 +18,7 @@
 import logging
 import os
 import socket
+import traceback
 from ariane_clip3.driver_factory import DriverFactory
 from ariane_clip3.injector import InjectorService, InjectorUITreeEntity, InjectorUITreeService, \
     InjectorCachedComponentService, InjectorCachedGearService
@@ -93,6 +94,7 @@ class ArianeConnector(object):
         except Exception as e:
             LOGGER.error("Problem while initializing Ariane directory service.")
             LOGGER.error(e.__str__())
+            LOGGER.error(traceback.format_exc())
             no_error = False
 
         if no_error:
@@ -109,6 +111,7 @@ class ArianeConnector(object):
             except Exception as e:
                 LOGGER.error("Problem while initializing Ariane mapping service.")
                 LOGGER.error(e.__str__())
+                LOGGER.error(traceback.format_exc())
                 no_error = False
 
         if no_error:
@@ -126,6 +129,7 @@ class ArianeConnector(object):
             except Exception as e:
                 LOGGER.error("Problem while initializing Ariane injector service.")
                 LOGGER.error(e.__str__())
+                LOGGER.error(traceback.format_exc())
                 no_error = False
 
         if no_error:

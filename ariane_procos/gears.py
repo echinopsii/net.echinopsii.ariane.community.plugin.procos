@@ -1218,10 +1218,11 @@ class MappingGear(InjectorGearSkeleton):
                                                 )
                                                 target_container.save()
 
-                                            MappingGear.sync_remote_container_network(target_os_instance,
-                                                                                      target_container)
-                                            MappingGear.sync_remote_container_team(target_os_instance,
-                                                                                   target_container)
+                                            if Container.OWNER_MAPPING_PROPERTY not in target_container.properties:
+                                                MappingGear.sync_remote_container_network(target_os_instance,
+                                                                                          target_container)
+                                                MappingGear.sync_remote_container_team(target_os_instance,
+                                                                                       target_container)
                                     if target_container is None:
                                         target_container = ContainerService.find_container(
                                             primary_admin_gate_url="not_my_concern://"+map_socket.destination_ip
