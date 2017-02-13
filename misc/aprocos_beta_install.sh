@@ -48,7 +48,8 @@ if [ $? -ne 0 ]; then
     if [ $? -ne 0 ]; then
         echo "apt-get nor rpm not found. Your OS is not supported !"
     else
-        yum install gcc python3-devel -y > /dev/null
+        yum install gcc gcc-c++ python3-devel -y > /dev/null
+        yum install redhat-rpm-config -y > /dev/null
     fi
 else
     apt-get install gcc python3-dev -y > /dev/null
