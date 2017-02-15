@@ -111,12 +111,19 @@ class DirectoryGear(InjectorGearSkeleton):
 
         for nic in operating_system.nics:
             nic_is_located = False
+            LOGGER.debug("DirectoryGear.compute_current_possible_network - current nic: " + str(nic))
             try:
                 if nic.ipv4_address is not None:
                     if not nic.ipv4_address.startswith('127'):
                         for location_config in SystemGear.config.potential_locations:
+                            LOGGER.debug("DirectoryGear.compute_current_possible_network - current loc config: " +
+                                         str(location_config))
                             for routing_area_config in location_config.routing_areas:
+                                LOGGER.debug("DirectoryGear.compute_current_possible_network - current RA config: " +
+                                             str(routing_area_config))
                                 for subnet_config in routing_area_config.subnets:
+                                    LOGGER.debug("DirectoryGear.compute_current_possible_network - "
+                                                 "current SUB config: " + str(subnet_config))
                                     if NetworkInterfaceCard.ip_is_in_subnet(nic.ipv4_address,
                                                                             subnet_config.subnet_ip,
                                                                             subnet_config.subnet_mask):
@@ -141,6 +148,8 @@ class DirectoryGear(InjectorGearSkeleton):
 
                         if not nic_is_located:
                             for subnet_config in local_routing_area.subnets:
+                                LOGGER.debug("DirectoryGear.compute_current_possible_network - "
+                                             "current local RA subnet config: " + str(subnet_config))
                                 if NetworkInterfaceCard.ip_is_in_subnet(nic.ipv4_address,
                                                                         subnet_config.subnet_ip,
                                                                         subnet_config.subnet_mask):
@@ -175,11 +184,6 @@ class DirectoryGear(InjectorGearSkeleton):
         if current_possible_subnet_config.__len__() == 0:
             self.is_network_sync_possible = False
 
-        if self.is_network_sync_possible:
-            if SystemGear.hostname != SystemGear.fqdn and SystemGear.fqdn is not None:
-                SystemGear.osi.admin_gate_uri = SystemGear.config.system_context.admin_gate_protocol+SystemGear.fqdn
-                SystemGear.osi.save()
-
         if SystemGear.fqdn is None:
             SystemGear.fqdn = SystemGear.hostname
 
@@ -196,40 +200,24 @@ class DirectoryGear(InjectorGearSkeleton):
             local_virt_subnet_config
         ]
 
-    @staticmethod
-    def sync_operating_system(operating_system):
+    def sync_operating_system(self, operating_system):
         LOGGER.debug("DirectoryGear.sync_operating_system")
         # Sync Operating System
         if operating_system.osi_id is not None:
             SystemGear.osi = OSInstanceService.find_os_instance(osi_id=operating_system.osi_id)
-            if SystemGear.hostname.split(".").__len__() > 1 and\
-               SystemGear.osi.name != SystemGear.hostname.split(".")[0]:
-                SystemGear.osi = None
-                operating_system.osi_id = None
-            elif SystemGear.osi.name != SystemGear.hostname:
+            if SystemGear.osi.name != SystemGear.hostname:
                 SystemGear.osi = None
                 operating_system.osi_id = None
 
         if SystemGear.osi is None:
-            if SystemGear.hostname.split(".").__len__() > 1:
-                SystemGear.osi = OSInstanceService.find_os_instance(osi_name=SystemGear.hostname.split(".")[0])
-                if SystemGear.osi is None:
-                    SystemGear.osi = OSInstance(
-                        name=SystemGear.hostname.split(".")[0],
-                        description=SystemGear.config.system_context.description,
-                        admin_gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.hostname)
-                    SystemGear.osi.save()
-                operating_system.osi_id = SystemGear.osi.id
-
+            SystemGear.osi = OSInstanceService.find_os_instance(osi_name=SystemGear.hostname)
             if SystemGear.osi is None:
-                SystemGear.osi = OSInstanceService.find_os_instance(osi_name=SystemGear.hostname)
-                if SystemGear.osi is None:
-                    SystemGear.osi = OSInstance(
-                        name=SystemGear.hostname,
-                        description=SystemGear.config.system_context.description,
-                        admin_gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.hostname)
-                    SystemGear.osi.save()
-                operating_system.osi_id = SystemGear.osi.id
+                SystemGear.osi = OSInstance(
+                    name=SystemGear.hostname,
+                    description=SystemGear.config.system_context.description,
+                    admin_gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.fqdn)
+                SystemGear.osi.save()
+            operating_system.osi_id = SystemGear.osi.id
 
         # SYNC EMBEDDING OSI
         if SystemGear.config.system_context.embedding_osi_hostname is not None and \
@@ -239,12 +227,6 @@ class DirectoryGear(InjectorGearSkeleton):
             )
             if embedding_osi is not None and SystemGear.osi.embedding_osi_id is not embedding_osi.id:
                 SystemGear.osi.embedding_osi_id = embedding_osi.id
-
-        # CLEAN NICs
-        for nic_id in SystemGear.osi.nic_ids:
-            nic = NICService.find_nic(nic_id=nic_id)
-            nic.remove()
-        SystemGear.osi.nic_ids = []
 
     @staticmethod
     def sync_operating_system_type(operating_system):
@@ -378,6 +360,7 @@ class DirectoryGear(InjectorGearSkeleton):
         current_location = current_possible_location_config[0]
 
         # Sync location
+        LOGGER.debug("DirectoryGear.sync_network - Sync location")
         if operating_system.location_id is not None:
             SystemGear.location = LocationService.find_location(operating_system.location_id)
             if SystemGear.location is not None and SystemGear.location.name != current_location.name:
@@ -418,6 +401,7 @@ class DirectoryGear(InjectorGearSkeleton):
             operating_system.location_id = SystemGear.location.id
 
         # Sync routing areas and subnets
+        LOGGER.debug("DirectoryGear.sync_network - Sync ra and subnets")
         for cached_routing_area_id in operating_system.routing_area_ids:
             cached_routing_area = RoutingAreaService.find_routing_area(ra_id=cached_routing_area_id)
             if cached_routing_area is not None:
@@ -549,6 +533,7 @@ class DirectoryGear(InjectorGearSkeleton):
                         SystemGear.osi.add_subnet(subnet)
 
         # CLEAN LOCAL SUBNETS FIRST
+        LOGGER.debug("DirectoryGear.sync_network - Clean local subnets first")
         for local_subnet_config in local_virt_subnet_config:
             subnet = SubnetService.find_subnet(sb_name=local_subnet_config.name)
             if subnet is not None:
@@ -559,6 +544,7 @@ class DirectoryGear(InjectorGearSkeleton):
                 subnet.remove()
 
         # THEN CLEAN LOCAL RA
+        LOGGER.debug("DirectoryGear.sync_network - Then lean local ra")
         loc_ra = RoutingAreaService.find_routing_area(ra_name=local_routing_area.name)
         if loc_ra is not None:
             if loc_ra.id in operating_system.routing_area_ids:
@@ -568,14 +554,15 @@ class DirectoryGear(InjectorGearSkeleton):
             loc_ra.remove()
 
         # FINALLY REINIT LOCAL RA AND SUBNETS
+        LOGGER.debug("DirectoryGear.sync_network - Reinit local ra and subnets")
         loc_ra = RoutingArea(name=local_routing_area.name,
                              multicast=local_routing_area.multicast,
                              ra_type=local_routing_area.type,
                              description=local_routing_area.description)
         loc_ra.save()
         loc_ra.add_location(SystemGear.location)
+        LOGGER.debug("DirectoryGear.sync_network - local ra reinit done")
         operating_system.routing_area_ids.append(loc_ra.id)
-        SystemGear.routing_areas.append(loc_ra)
 
         loopback_subnet_conf = SubnetConfig(
             name=SystemGear.hostname+".loopback",
@@ -593,89 +580,138 @@ class DirectoryGear(InjectorGearSkeleton):
                             ip=local_subnet_config.subnet_ip, mask=local_subnet_config.subnet_mask)
             subnet.save()
             subnet.add_location(SystemGear.location)
-            loc_ra.sync()
             SystemGear.osi.add_subnet(subnet)
             operating_system.subnet_ids.append(subnet.id)
             SystemGear.subnets.append(subnet)
+            LOGGER.debug("DirectoryGear.sync_network - local sn " + str(subnet) + " reinit done")
 
-        SystemGear.osi.sync()
-        for ipv4_id in SystemGear.osi.ip_address_ids:
-            ipv4 = IPAddressService.find_ip_address(ipa_id=ipv4_id)
-            to_be_removed = True
-            if ipv4 is not None:
-                for nic in operating_system.nics:
-                    if nic is not None and nic.ipv4_address == ipv4.ip_address:
-                        to_be_removed = False
-                if to_be_removed:
-                    ipv4.remove()
-            else:
-                LOGGER.error("DirectoryGear.sync_network - sync error on IP ("+str(ipv4_id)+")")
-                SystemGear.osi.ip_address_ids.remove(ipv4_id)
+        LOGGER.debug("DirectoryGear.sync_network - check former nics to be removed...")
+        nics_2_rm = []
+        for nic_id in SystemGear.osi.nic_ids:
+            still_here = False
+            nic = NICService.find_nic(nic_id=nic_id)
+            if nic is not None:
+                for sniffed_nic in operating_system.nics:
+                    if (sniffed_nic.mac_address is None or not sniffed_nic.mac_address) or sniffed_nic.name == "lo":
+                        nicmcaddr = sniffed_nic.ipv4_fqdn
+                    else:
+                        nicmcaddr = sniffed_nic.mac_address
+                    if nic.mac_address == nicmcaddr:
+                        still_here = True
+                if not still_here:
+                    nics_2_rm.append(nic)
 
+        LOGGER.debug("DirectoryGear.sync_network - remove former nic for osi...")
+        for nic_2_rm in nics_2_rm:
+            LOGGER.debug("DirectoryGear.sync_network - getting ip attached to nic " + str(nic_2_rm))
+            if nic_2_rm.ipv4_fqdn:
+                ip_address = IPAddressService.find_ip_address(ipa_fqdn=nic_2_rm.ipv4_fqdn)
+                if ip_address is not None:
+                    SystemGear.osi.del_ip_address(ip_address)
+                    ip_address.remove()
+            SystemGear.osi.del_nic(nic_2_rm)
+            nic_2_rm.remove()
+
+        LOGGER.debug("DirectoryGear.sync_network - Sync nic")
         for nic in operating_system.nics:
+            is_in_subnet = False
             ip_address = None
+            LOGGER.debug("DirectoryGear.sync_network - nic: " + str(nic))
             if nic.ipv4_address is not None:
                 if not nic.ipv4_address.startswith('127'):
                     for subnet in SystemGear.subnets:
+                        LOGGER.debug("DirectoryGear.sync_network - non localhost subnet: " + str(subnet))
                         if NetworkInterfaceCard.ip_is_in_subnet(nic.ipv4_address, subnet.ip, subnet.mask):
                             ip_address = IPAddressService.find_ip_address(ipa_ip_address=nic.ipv4_address,
                                                                           ipa_subnet_id=subnet.id)
                             if ip_address is None:
                                 ip_address = IPAddress(ip_address=nic.ipv4_address, fqdn=nic.ipv4_fqdn,
                                                        ipa_subnet_id=subnet.id, ipa_osi_id=SystemGear.osi.id)
+                                LOGGER.debug("DirectoryGear.sync_network - save new ip: " + str(ip_address))
                                 ip_address.save()
                                 subnet.sync()
                             else:
                                 if ip_address.ipa_os_instance_id != SystemGear.osi.id:
                                     ip_address.ipa_os_instance_id = SystemGear.osi.id
+                                    LOGGER.debug("DirectoryGear.sync_network - upgrade ip: " + str(ip_address))
                                     ip_address.save()
                             subnet.is_default = nic.is_default
-                            SystemGear.osi.sync()
+                            is_in_subnet = True
                             break
                 else:
                     loopback_subnet = SubnetService.find_subnet(sb_name=SystemGear.hostname+".loopback")
-                    ip_address = IPAddressService.find_ip_address(ipa_fqdn=nic.ipv4_fqdn)
-                    if ip_address is not None:
+                    ip_address = IPAddressService.find_ip_address(ipa_ip_address=nic.ipv4_address,
+                                                                  ipa_subnet_id=loopback_subnet.id)
+                    if ip_address is not None and (ip_address.fqdn != nic.ipv4_fqdn or
+                       ip_address.ip_address != nic.ipv4_address or ip_address.ipa_subnet_id != loopback_subnet.id or
+                       ip_address.ipa_osi_id != SystemGear.osi.id):
                         ip_address.remove()
-                    ip_address = IPAddress(ip_address=nic.ipv4_address, fqdn=nic.ipv4_fqdn,
-                                           ipa_subnet_id=loopback_subnet.id, ipa_osi_id=SystemGear.osi.id)
-                    ip_address.save()
-                    loopback_subnet.sync()
+                        ip_address = IPAddress(ip_address=nic.ipv4_address, fqdn=nic.ipv4_fqdn,
+                                               ipa_subnet_id=loopback_subnet.id, ipa_osi_id=SystemGear.osi.id)
+                        LOGGER.debug("DirectoryGear.sync_network - upgrade ip: " + str(ip_address))
+                        ip_address.save()
+                        LOGGER.debug("DirectoryGear.sync_network - sync loopback subnet...")
+                        loopback_subnet.sync()
+                    elif ip_address is None:
+                        ip_address = IPAddress(ip_address=nic.ipv4_address, fqdn=nic.ipv4_fqdn,
+                                               ipa_subnet_id=loopback_subnet.id, ipa_osi_id=SystemGear.osi.id)
+                        LOGGER.debug("DirectoryGear.sync_network - save new ip: " + str(ip_address))
+                        ip_address.save()
+                        LOGGER.debug("DirectoryGear.sync_network - sync loopback subnet...")
+                        loopback_subnet.sync()
+                    is_in_subnet = True
 
-            if (nic.mac_address is None or not nic.mac_address) or nic.name == "lo":
-                nicmcaddr = nic.ipv4_fqdn
-            else:
-                nicmcaddr = nic.mac_address
-            if nicmcaddr is not None and nicmcaddr:
-                nic2save = NICService.find_nic(nic_mac_address=nicmcaddr)
-                if nic2save is None:
-                    nic2save = NIC(
-                        name=SystemGear.hostname+"."+nic.name,
-                        mac_address=nicmcaddr,
-                        duplex=nic.duplex,
-                        speed=nic.speed,
-                        mtu=nic.mtu,
-                        nic_osi_id=operating_system.osi_id,
-                        nic_ipa_id=ip_address.id if ip_address is not None else None
-                    )
+            if is_in_subnet:
+                if (nic.mac_address is None or not nic.mac_address) or nic.name == "lo":
+                    nicmcaddr = nic.ipv4_fqdn
                 else:
-                    nic2save.nic_ipa_id = ip_address.id if ip_address is not None else None
-                    nic2save.nic_osi_id = operating_system.osi_id
-                nic2save.save()
-            else:
-                LOGGER.error("DirectoryGear.sync_network - Error while saving nic : " + str(nic))
+                    nicmcaddr = nic.mac_address
+                if nicmcaddr is not None and nicmcaddr:
+                    LOGGER.debug("DirectoryGear.sync_network - searching nic from mcaddr " + str(nicmcaddr))
+                    nic2save = NICService.find_nic(nic_mac_address=nicmcaddr)
+                    if nic2save is None:
+                        nic2save = NIC(
+                            name=SystemGear.hostname+"."+nic.name,
+                            mac_address=nicmcaddr,
+                            duplex=nic.duplex,
+                            speed=nic.speed,
+                            mtu=nic.mtu,
+                            nic_osi_id=operating_system.osi_id,
+                            nic_ipa_id=ip_address.id if ip_address is not None else None
+                        )
+                        LOGGER.debug("DirectoryGear.sync_network - saving new nic " + str(nicmcaddr))
+                        nic2save.save()
+                    else:
+                        to_upgrade = False
+                        if ip_address is not None and nic2save.nic_ipa_id != ip_address.id or\
+                           ip_address is None and nic2save.nic_ipa_id != -1:
+                            nic2save.nic_ipa_id = ip_address.id if ip_address is not None else None
+                            to_upgrade = True
+                        if nic2save.nic_osi_id != operating_system.osi_id:
+                            nic2save.nic_osi_id = operating_system.osi_id
+                            to_upgrade = True
+                        if to_upgrade:
+                            LOGGER.debug("DirectoryGear.sync_network - ip_address: " + str(ip_address))
+                            LOGGER.debug("DirectoryGear.sync_network - nic2save: " + str(nic2save))
+                            nic2save.nic_ipa_id = ip_address.id if ip_address is not None else None
+                            nic2save.nic_osi_id = operating_system.osi_id
+                            LOGGER.debug("DirectoryGear.sync_network - upgrading new nic " + str(nicmcaddr))
+                            nic2save.save()
+                else:
+                    LOGGER.error("DirectoryGear.sync_network - Error while saving nic : " + str(nic))
+        SystemGear.osi = OSInstanceService.find_os_instance(osi_id=operating_system.osi_id)
 
     def init_ariane_directories(self, component):
         LOGGER.debug("DirectoryGear.init_ariane_directories")
         operating_system = component.operating_system.get()
         try:
             start_time = timeit.default_timer()
+            self.compute_current_possible_network(operating_system)
             self.sync_operating_system(operating_system)
             self.sync_operating_system_type(operating_system)
             self.sync_environment(operating_system)
             self.sync_team(operating_system)
 
-            self.compute_current_possible_network(operating_system)
             if self.is_network_sync_possible:
                 self.sync_network(operating_system)
             sync_proc_time = timeit.default_timer()-start_time
@@ -1638,9 +1674,9 @@ class MappingGear(InjectorGearSkeleton):
             try:
                 start_time = timeit.default_timer()
                 operating_system = component.operating_system.get()
-                # SessionService.open_session("ArianeProcOS_" + socket.gethostname())
+                # SessionService.open_session("ArianeProcOS_" + str(SystemGear.hostname))
                 self.sync_container(operating_system)
-                SessionService.open_session("ArianeProcOS_" + socket.gethostname())
+                SessionService.open_session("ArianeProcOS_" + str(SystemGear.hostname))
                 self.sync_processs(operating_system)
                 self.sync_map_socket(operating_system)
                 SessionService.commit()
@@ -1709,6 +1745,8 @@ class SystemGear(InjectorGearSkeleton):
     def __init__(self, config):
         LOGGER.debug("SystemGear.__init__")
         SystemGear.hostname = socket.gethostname()
+        if SystemGear.hostname.split(".").__len__() > 1:
+            SystemGear.hostname = SystemGear.hostname.split(".")[0]
         SystemGear.config = config
         super(SystemGear, self).__init__(
             gear_id='ariane.community.plugin.procos.gears.cache.system_gear@'+str(SystemGear.hostname),
@@ -1734,11 +1772,14 @@ class SystemGear(InjectorGearSkeleton):
         ).proxy()
         self.directory_gear = DirectoryGear.start().proxy()
         self.mapping_gear = MappingGear.start().proxy()
+        self.sync_in_progress = False
 
     def synchronize_with_ariane_dbs(self):
         LOGGER.debug("SystemGear.synchronize_with_ariane_dbs - sync db")
-        self.directory_gear.synchronize_with_ariane_directories(self.component)
-        self.mapping_gear.synchronize_with_ariane_mapping(self.component)
+        self.sync_in_progress = True
+        self.directory_gear.synchronize_with_ariane_directories(self.component).get()
+        self.mapping_gear.synchronize_with_ariane_mapping(self.component).get()
+        self.sync_in_progress = False
 
     def init_with_ariane_dbs(self):
         LOGGER.debug("SystemGear.init_with_ariane_dbs - Initializing...")
@@ -1754,7 +1795,10 @@ class SystemGear(InjectorGearSkeleton):
             while self.running:
                 time.sleep(self.sleeping_period)
                 if self.running:
-                    self.component.sniff().get()
+                    if not self.sync_in_progress:
+                        self.component.sniff().get()
+                    else:
+                        LOGGER.warn("SystemGear.run - wait last sync to be completed !")
 
     def on_start(self):
         LOGGER.debug("SystemGear.on_start")
