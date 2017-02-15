@@ -204,24 +204,28 @@ class DirectoryGear(InjectorGearSkeleton):
         LOGGER.debug("DirectoryGear.sync_operating_system")
         # Sync Operating System
         if operating_system.osi_id is not None:
+            LOGGER.debug("DirectoryGear.sync_operating_system - search by id")
             SystemGear.osi = OSInstanceService.find_os_instance(osi_id=operating_system.osi_id)
             if SystemGear.osi.name != SystemGear.hostname:
                 SystemGear.osi = None
                 operating_system.osi_id = None
 
         if SystemGear.osi is None:
+            LOGGER.debug("DirectoryGear.sync_operating_system - search by hostname")
             SystemGear.osi = OSInstanceService.find_os_instance(osi_name=SystemGear.hostname)
             if SystemGear.osi is None:
                 SystemGear.osi = OSInstance(
                     name=SystemGear.hostname,
                     description=SystemGear.config.system_context.description,
                     admin_gate_uri=SystemGear.config.system_context.admin_gate_protocol+SystemGear.fqdn)
+                LOGGER.debug("DirectoryGear.sync_operating_system - save new osi")
                 SystemGear.osi.save()
             operating_system.osi_id = SystemGear.osi.id
 
         # SYNC EMBEDDING OSI
         if SystemGear.config.system_context.embedding_osi_hostname is not None and \
                 SystemGear.config.system_context.embedding_osi_hostname:
+            LOGGER.debug("DirectoryGear.sync_operating_system - search embedding host by hostname")
             embedding_osi = OSInstanceService.find_os_instance(
                 osi_name=SystemGear.config.system_context.embedding_osi_hostname
             )
@@ -765,6 +769,7 @@ class MappingGear(InjectorGearSkeleton):
         self.update_count = 0
         self.osi_container = None
         self.init_done = False
+        self.target_osi_cache = {}
 
     def on_start(self):
         LOGGER.debug("MappingGear.on_start")
@@ -1213,10 +1218,22 @@ class MappingGear(InjectorGearSkeleton):
 
                                     if target_fqdn != "localhost" and target_fqdn is not None:
                                         target_os_instance = None
+                                        target_os_hostname = None
+
                                         if target_fqdn.split(".").__len__() > 1:
-                                            target_os_instance = OSInstanceService.find_os_instance(
-                                                osi_name=target_fqdn.split(".")[0]
-                                            )
+                                            target_os_hostname = target_fqdn.split(".")[0]
+                                            if target_os_hostname in self.target_osi_cache and \
+                                               self.target_osi_cache[target_os_hostname] is not None:
+                                                target_os_instance = self.target_osi_cache[target_os_hostname]
+                                            else:
+                                                target_os_instance = OSInstanceService.find_os_instance(
+                                                    osi_name=target_os_hostname
+                                                )
+                                        else:
+                                            target_os_hostname = target_fqdn
+                                            if target_os_hostname in self.target_osi_cache and \
+                                               self.target_osi_cache[target_os_hostname] is not None:
+                                                target_os_instance = self.target_osi_cache[target_os_hostname]
 
                                         if target_os_instance is None:
                                             target_os_instance = OSInstanceService.find_os_instance(
@@ -1231,6 +1248,9 @@ class MappingGear(InjectorGearSkeleton):
                                                 )
 
                                         if target_os_instance is not None:
+                                            if target_os_hostname not in self.target_osi_cache:
+                                                self.target_osi_cache[target_os_hostname] = target_os_instance
+
                                             if target_container is None:
                                                 target_container = ContainerService.find_container(
                                                     primary_admin_gate_url=target_os_instance.admin_gate_uri
@@ -1264,7 +1284,8 @@ class MappingGear(InjectorGearSkeleton):
                                                 )
                                                 target_container.save()
 
-                                            if Container.OWNER_MAPPING_PROPERTY not in target_container.properties:
+                                            if target_container.properties is None or \
+                                                    Container.OWNER_MAPPING_PROPERTY not in target_container.properties:
                                                 MappingGear.sync_remote_container_network(target_os_instance,
                                                                                           target_container)
                                                 MappingGear.sync_remote_container_team(target_os_instance,
