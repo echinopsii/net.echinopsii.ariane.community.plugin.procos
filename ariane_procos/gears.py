@@ -770,6 +770,8 @@ class MappingGear(InjectorGearSkeleton):
         self.osi_container = None
         self.init_done = False
         self.target_osi_cache = {}
+        self.cache_clean_counter = 0
+        self.cache_clean_counter_max = 60
 
     def on_start(self):
         LOGGER.debug("MappingGear.on_start")
@@ -951,7 +953,7 @@ class MappingGear(InjectorGearSkeleton):
         target_routing_areas = []
         target_subnets = []
 
-        if Container.PL_MAPPING_PROPERTIES in target_container.properties and \
+        if target_container.properties is not None and Container.PL_MAPPING_PROPERTIES in target_container.properties and \
            Container.NETWORK_MAPPING_PROPERTIES in target_container.properties:
             LOGGER.debug("MappingGear.sync_remote_container_network - network already defined for remote container.")
             return
@@ -987,7 +989,7 @@ class MappingGear(InjectorGearSkeleton):
     def sync_remote_container_team(target_os_instance, target_container):
         LOGGER.debug("MappingGear.sync_remote_container_team - begin")
 
-        if Container.TEAM_SUPPORT_MAPPING_PROPERTIES in target_container.properties:
+        if target_container.properties is not None and Container.TEAM_SUPPORT_MAPPING_PROPERTIES in target_container.properties:
             LOGGER.debug("MappingGear.sync_remote_container_network - team already defined for remote container.")
             return
 
@@ -1694,6 +1696,10 @@ class MappingGear(InjectorGearSkeleton):
         if self.running:
             try:
                 start_time = timeit.default_timer()
+                self.cache_clean_counter += 1
+                if self.cache_clean_counter == self.cache_clean_counter_max:
+                    self.cache_clean_counter = 0
+                    self.target_osi_cache = {}
                 operating_system = component.operating_system.get()
                 # SessionService.open_session("ArianeProcOS_" + str(SystemGear.hostname))
                 self.sync_container(operating_system)
