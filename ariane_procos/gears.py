@@ -806,7 +806,7 @@ class MappingGear(InjectorGearSkeleton):
 
     @staticmethod
     def diff_container_network_location(container, location):
-        if Container.PL_MAPPING_PROPERTIES in container.properties:
+        if container.properties is not None and Container.PL_MAPPING_PROPERTIES in container.properties:
             return (
                 container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_NAME_MAPPING_FIELD] != location.name or
                 container.properties[Container.PL_MAPPING_PROPERTIES][Container.PL_ADDR_MAPPING_FIELD] != location.address or
@@ -869,7 +869,7 @@ class MappingGear(InjectorGearSkeleton):
 
     @staticmethod
     def diff_container_team(container, team):
-        if Container.TEAM_SUPPORT_MAPPING_PROPERTIES in container.properties:
+        if container.properties is not None and Container.TEAM_SUPPORT_MAPPING_PROPERTIES in container.properties:
             try:
                 ret = container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][Container.TEAM_NAME_MAPPING_FIELD] != team.name or \
                     container.properties[Container.TEAM_SUPPORT_MAPPING_PROPERTIES][Container.TEAM_COLR_MAPPING_FIELD] != team.color_code
