@@ -1304,7 +1304,7 @@ class MappingGear(InjectorGearSkeleton):
                                             )
                                             target_container.save()
 
-                                    if not destination_is_local:
+                                    if target_container.id is not None and not destination_is_local:
                                         selector = "endpointURL =~ '.*:" + str(map_socket.destination_port) + ".*'"
 
                                         endpoints = EndpointService.find_endpoint(
