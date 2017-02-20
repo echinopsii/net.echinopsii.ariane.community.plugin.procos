@@ -177,10 +177,10 @@ class Process(object):
         self.username = username
         self.cpu_affinity = cpu_affinity
         self.terminal = terminal
-        self.last_map_sockets = last_map_sockets
-        self.map_sockets = map_sockets
-        self.new_map_sockets = new_map_sockets
-        self.dead_map_sockets = dead_map_sockets
+        self.last_map_sockets = last_map_sockets if last_map_sockets is not None else []
+        self.map_sockets = map_sockets if map_sockets is not None else []
+        self.new_map_sockets = new_map_sockets if new_map_sockets is not None else []
+        self.dead_map_sockets = dead_map_sockets if dead_map_sockets is not None else []
         self.uids = uids
         self.gids = gids
 
@@ -200,6 +200,14 @@ class Process(object):
         if self.map_sockets is not None:
             for map_socket in self.map_sockets:
                 map_sockets_json.append(map_socket.to_json())
+        new_map_sockets_json = []
+        if self.new_map_sockets is not None:
+            for map_socket in self.new_map_sockets:
+                new_map_sockets_json.append(map_socket.to_json())
+        dead_map_sockets_json = []
+        if self.dead_map_sockets is not None:
+            for map_socket in self.dead_map_sockets:
+                dead_map_sockets_json.append(map_socket.to_json())
         json_obj = {
             'pid': self.pid,
             'name': self.name,
@@ -211,6 +219,8 @@ class Process(object):
             'cpu_affinity': self.cpu_affinity,
             'terminal': self.terminal,
             'sockets': map_sockets_json,
+            'new_sockets': new_map_sockets_json,
+            'dead_sockets': dead_map_sockets_json,
             'uids': self.uids,
             'gids': self.gids,
             'mapping_id': self.mapping_id,
@@ -221,14 +231,23 @@ class Process(object):
     @staticmethod
     def json_2_proc(json_obj):
         map_sockets = []
-        map_sockets_json = json_obj['sockets']
+        map_sockets_json = json_obj['sockets'] if 'sockets' in json_obj else []
         for connection_json in map_sockets_json:
             map_sockets.append(MapSocket.from_json(connection_json))
+        new_map_sockets = []
+        new_map_sockets_json = json_obj['new_sockets'] if 'new_sockets' in json_obj else []
+        for connection_json in new_map_sockets_json:
+            new_map_sockets.append(MapSocket.from_json(connection_json))
+        dead_map_sockets = []
+        dead_map_sockets_json = json_obj['dead_sockets'] if 'dead_sockets' in json_obj else []
+        for connection_json in dead_map_sockets_json:
+            dead_map_sockets.append(MapSocket.from_json(connection_json))
         return Process(pid=json_obj['pid'], name=json_obj['name'], create_time=json_obj['create_time'],
                        exe=json_obj['exe'], cwd=json_obj['cwd'], cmdline=json_obj['cmdline'],
                        username=json_obj['username'], cpu_affinity=json_obj['cpu_affinity'],
-                       terminal=json_obj['terminal'], map_sockets=map_sockets, uids=json_obj['uids'],
-                       gids=json_obj['gids'], mapping_id=json_obj['mapping_id'], is_node=json_obj['is_node'])
+                       terminal=json_obj['terminal'], map_sockets=map_sockets, new_map_sockets=new_map_sockets,
+                       dead_map_sockets=dead_map_sockets, uids=json_obj['uids'], gids=json_obj['gids'],
+                       mapping_id=json_obj['mapping_id'], is_node=json_obj['is_node'])
 
 
 class NicDuplex(object):
@@ -330,6 +349,7 @@ class OperatingSystem(object):
     def __init__(self, container_id=None, osi_id=None, ost_id=None, environment_id=None, team_id=None,
                  location_id=None, routing_area_ids=None, subnet_ids=None,
                  hostname=None, last_nics=None, nics=None, last_processs=None, processs=None,
+                 new_processs=None, dead_processs=None,
                  duplex_links_endpoint=None, wip_delete_duplex_links_endpoints=None, config=None):
         LOGGER.debug("OperatingSystem.__init__")
 
@@ -349,8 +369,8 @@ class OperatingSystem(object):
         self.nics = nics if nics is not None else []
         self.last_processs = last_processs if last_processs is not None else []
         self.processs = processs if processs is not None else []
-        self.new_processs = []
-        self.dead_processs = []
+        self.new_processs = new_processs if new_processs is not None else []
+        self.dead_processs = dead_processs if dead_processs is not None else []
 
         self.duplex_links_endpoints = duplex_links_endpoint if duplex_links_endpoint is not None else []
         self.wip_delete_duplex_links_endpoints = wip_delete_duplex_links_endpoints if wip_delete_duplex_links_endpoints is not None else []
@@ -430,12 +450,20 @@ class OperatingSystem(object):
         processs_json = []
         for process in self.processs:
             processs_json.append(process.proc_2_json())
+        new_processs_json = []
+        for process in self.new_processs:
+            new_processs_json.append(process.proc_2_json())
+        dead_processs_json = []
+        for process in self.dead_processs:
+            dead_processs_json.append(process.proc_2_json())
         json_obj = {
             'hostname': self.hostname,
             'last_nics': last_nics_json,
             'nics': nics_json,
             'last_processs': last_processs_json,
             'processs': processs_json,
+            'new_processs': new_processs_json,
+            'dead_processs': dead_processs_json,
             'container_id': self.container_id,
             'osi_id': self.osi_id,
             'ost_id': self.ost_id,
@@ -452,25 +480,35 @@ class OperatingSystem(object):
     @staticmethod
     def json_2_operating_system(json_obj):
         LOGGER.debug("OperatingSystem.json_2_operating_system")
-        last_nics_json = json_obj['last_nics']
+        last_nics_json = json_obj['last_nics'] if 'last_nics' in json_obj else []
         last_nics = []
         for last_nic_json in last_nics_json:
             last_nics.append(NetworkInterfaceCard.from_json(last_nic_json))
 
-        nics_json = json_obj['nics']
+        nics_json = json_obj['nics'] if 'nics' in json_obj else []
         nics = []
         for nic_json in nics_json:
             nics.append(NetworkInterfaceCard.from_json(nic_json))
 
-        last_processs_json = json_obj['last_processs']
+        last_processs_json = json_obj['last_processs'] if 'last_processs' in json_obj else []
         last_processs = []
         for last_process in last_processs_json:
             last_processs.append(Process.json_2_proc(last_process))
 
-        processs_json = json_obj['processs']
+        processs_json = json_obj['processs'] if 'processs' in json_obj else []
         processs = []
         for process in processs_json:
             processs.append(Process.json_2_proc(process))
+
+        new_processs_json = json_obj['new_processs'] if 'new_processs' in json_obj else []
+        new_processs = []
+        for process in new_processs_json:
+            new_processs.append(Process.json_2_proc(process))
+
+        dead_processs_json = json_obj['dead_processs'] if 'dead_processs' in json_obj else []
+        dead_processs = []
+        for process in dead_processs_json:
+            dead_processs.append(Process.json_2_proc(process))
 
         return OperatingSystem(
             container_id=json_obj['container_id'], osi_id=json_obj['osi_id'],
@@ -478,7 +516,8 @@ class OperatingSystem(object):
             environment_id=json_obj['environment_id'], team_id=json_obj['team_id'],
             routing_area_ids=json_obj['routing_area_ids'], subnet_ids=json_obj['subnet_ids'],
             hostname=json_obj['hostname'], last_nics=last_nics, nics=nics, last_processs=last_processs,
-            processs=processs, duplex_links_endpoint=json_obj['duplex_links_endpoints'],
+            processs=processs, new_processs=new_processs, dead_processs=dead_processs,
+            duplex_links_endpoint=json_obj['duplex_links_endpoints'],
             wip_delete_duplex_links_endpoints=json_obj['wip_delete_duplex_links_endpoints']
         )
 
