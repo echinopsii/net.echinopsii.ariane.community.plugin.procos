@@ -1709,9 +1709,10 @@ class MappingGear(InjectorGearSkeleton):
                 LOGGER.info('MappingGear.synchronize_with_ariane_mapping - time : ' + str(sync_proc_time))
                 LOGGER.debug("MappingGear.synchronize_with_ariane_mapping - activate " +
                              SystemGear.domino_ariane_sync_topic)
-                SystemGear.domino_activator.activate(SystemGear.domino_ariane_sync_topic)
                 if not self.init_done:
                     self.init_done = True
+                else:
+                    SystemGear.domino_activator.activate(SystemGear.domino_ariane_sync_topic)
             except Exception as e:
                 LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + e.__str__())
                 LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + traceback.format_exc())
