@@ -66,9 +66,9 @@ class SystemComponent(InjectorComponentSkeleton):
     def sniff(self, synchronize_with_ariane_dbs=True):
         try:
             LOGGER.debug("SystemComponent.sniff - activate " + self.topic)
-            self.domino.activate(self.topic)
             start_time = timeit.default_timer()
             self.cache(refreshing=True, next_action=InjectorCachedComponent.action_update, data_blob=self.data_blob())
+            self.domino.activate(self.topic)
             self.operating_system.update()
             self.cache(
                 refreshing=False, next_action=InjectorCachedComponent.action_update,
