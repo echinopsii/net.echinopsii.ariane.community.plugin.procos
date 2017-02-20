@@ -23,7 +23,7 @@ import timeit
 import traceback
 from ariane_clip3.exceptions import ArianeMessagingTimeoutError
 from ariane_clip3.mapping import ContainerService, Container, NodeService, Node, Endpoint, EndpointService, Transport, \
-    Link, LinkService, SessionService, Gate, GateService
+    Link, LinkService, Gate, GateService
 from ariane_clip3.directory import LocationService, Location, RoutingAreaService, RoutingArea, OSInstanceService,\
     OSInstance, SubnetService, Subnet, IPAddressService, IPAddress, EnvironmentService, Environment, TeamService, Team,\
     OSTypeService, OSType, Company, CompanyService, NICService, NIC
@@ -1701,14 +1701,10 @@ class MappingGear(InjectorGearSkeleton):
                     self.cache_clean_counter = 0
                     self.target_osi_cache = {}
                 operating_system = component.operating_system.get()
-                # SessionService.open_session("ArianeProcOS_" + str(SystemGear.hostname))
                 self.sync_container(operating_system)
-                SessionService.open_session("ArianeProcOS_" + str(SystemGear.hostname))
                 self.sync_processs(operating_system)
                 self.sync_map_socket(operating_system)
-                SessionService.commit()
                 self.update_count += 1
-                SessionService.close_session()
                 sync_proc_time = timeit.default_timer()-start_time
                 LOGGER.info('MappingGear.synchronize_with_ariane_mapping - time : ' + str(sync_proc_time))
                 LOGGER.debug("MappingGear.synchronize_with_ariane_mapping - activate " +
@@ -1719,30 +1715,6 @@ class MappingGear(InjectorGearSkeleton):
             except Exception as e:
                 LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + e.__str__())
                 LOGGER.error("MappingGear.synchronize_with_ariane_mapping - " + traceback.format_exc())
-                try:
-                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - mapping rollback to previous state")
-                    SessionService.rollback()
-                except Exception as e:
-                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - exception on mapping rollback : " +
-                                 e.__str__())
-                    LOGGER.debug("MappingGear.synchronize_with_ariane_mapping - exception on mapping rollback : " +
-                                 traceback.format_exc())
-                try:
-                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - mapping session close")
-                    SessionService.close_session()
-                except Exception as e:
-                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - exception on mapping session closing : "
-                                 + e.__str__())
-                    LOGGER.debug("MappingGear.synchronize_with_ariane_mapping - exception on mapping session closing : "
-                                 + traceback.format_exc())
-                try:
-                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - injector cache rollback")
-                    component.rollback().get()
-                except Exception as e:
-                    LOGGER.error("MappingGear.synchronize_with_ariane_mapping - exception on injector cache rollback : "
-                                 + e.__str__())
-                    LOGGER.debug("MappingGear.synchronize_with_ariane_mapping - exception on injector cache rollback : "
-                                 + traceback.format_exc())
         else:
             LOGGER.warn('Synchronization requested but procos_mapping_gear@' + str(SystemGear.hostname) +
                         ' is not running.')
@@ -1811,9 +1783,10 @@ class SystemGear(InjectorGearSkeleton):
     def init_with_ariane_dbs(self):
         LOGGER.debug("SystemGear.init_with_ariane_dbs - Initializing...")
         self.directory_gear.init_ariane_directories(self.component).get()
-        self.component.sniff(synchronize_with_ariane_dbs=False).get()
-        self.directory_gear.synchronize_with_ariane_directories(self.component).get()
         self.mapping_gear.synchronize_with_ariane_mapping(self.component).get()
+        # self.component.sniff(synchronize_with_ariane_dbs=False).get()
+        # self.directory_gear.synchronize_with_ariane_directories(self.component).get()
+        # self.mapping_gear.synchronize_with_ariane_mapping(self.component).get()
         LOGGER.info("SystemGear.init_with_ariane_dbs - Initialization done.")
 
     def run(self):
