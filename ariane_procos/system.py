@@ -317,7 +317,7 @@ class NetworkInterfaceCard(object):
     def ip_is_in_subnet(ip_address, subnet_ip, subnet_mask):
         ret = False
         if ip_address and subnet_ip and subnet_mask:
-            ret = IPv4Address(ip_address) in ip_network(subnet_ip+'/' + subnet_mask)
+            ret = IPv4Address(ip_address) in ip_network(subnet_ip + '/' + subnet_mask)
         return ret
 
     @staticmethod
