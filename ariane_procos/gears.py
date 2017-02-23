@@ -21,6 +21,8 @@ import threading
 import time
 import timeit
 import traceback
+from sys import platform as _platform
+import subprocess
 from ariane_clip3.exceptions import ArianeMessagingTimeoutError
 from ariane_clip3.mapping import ContainerService, Container, NodeService, Node, Endpoint, EndpointService, Transport, \
     Link, LinkService, Gate, GateService
@@ -867,6 +869,13 @@ class MappingGear(InjectorGearSkeleton):
                 LOGGER.debug("MappingGear.sync_container_network - add network property")
                 container.add_property((Container.NETWORK_MAPPING_PROPERTIES, network_properties))
 
+            if _platform == "linux" or _platform == "linux2":
+                bytes_ = subprocess.check_output(['cat', '/proc/sys/net/ipv4/ip_forward'])
+                if '1' in str(bytes_):
+                    container.add_property((Container.OSI_IS_ROUTER_FIELD, True))
+                else:
+                    container.add_property((Container.OSI_IS_ROUTER_FIELD, False))
+
     @staticmethod
     def diff_container_team(container, team):
         if container.properties is not None and Container.TEAM_SUPPORT_MAPPING_PROPERTIES in container.properties:
@@ -1268,7 +1277,8 @@ class MappingGear(InjectorGearSkeleton):
                                         elif endpoints is not None and endpoints.__len__() > 1:
                                             LOGGER.debug("MappingGear.sync_map_socket - "
                                                          "Multiple endpoints found for selector " + selector +
-                                                         " on container " + target_container.id)
+                                                         " on container " + target_container.id +
+                                                         " - let remote do the job...")
                                         elif (endpoints is not None and endpoints.__len__() == 0) or endpoints is None:
                                             LOGGER.debug("MappingGear.sync_map_socket - "
                                                          "No endpoint found for selector " + selector +
@@ -1277,20 +1287,24 @@ class MappingGear(InjectorGearSkeleton):
                                         if target_endpoint is None and \
                                                 Container.OWNER_MAPPING_PROPERTY not in target_container.properties:
                                             addr = target_fqdn if target_fqdn is not None else map_socket.destination_ip
-                                            node_name = addr + ':' + str(map_socket.destination_port)
-                                            LOGGER.debug("create node " + node_name + " through container " +
-                                                         target_container.id)
-                                            target_node = Node(
-                                                name=node_name,
-                                                container_id=target_container.id,
-                                                ignore_sync=True
+                                            LOGGER.debug("create node " + Container.OSI_KERNEL_PROC_NAME +
+                                                         " through container " + target_container.id)
+                                            target_node = NodeService.find_node(
+                                                name=Container.OSI_KERNEL_PROC_NAME, cid=target_container.id
                                             )
-                                            target_node.save()
+                                            if target_node is None:
+                                                target_node = Node(
+                                                    name=Container.OSI_KERNEL_PROC_NAME,
+                                                    container_id=target_container.id,
+                                                    ignore_sync=True
+                                                )
+                                                target_node.save()
 
                                             target_endpoint = Endpoint(
                                                 url=target_url, parent_node_id=target_node.id, ignore_sync=True
                                             )
                                             target_endpoint.save()
+
                                     else:
                                         for proc_srv in operating_system.processs:
                                             for srv_socket in proc_srv.map_sockets:
@@ -1459,6 +1473,18 @@ class MappingGear(InjectorGearSkeleton):
             return
 
         start_time = timeit.default_timer()
+        kernel_map_obj = NodeService.find_node(name=Container.OSI_KERNEL_PROC_NAME, cid=self.osi_container.id)
+        if kernel_map_obj is None:
+            kernel_map_obj = Node(
+                name=Container.OSI_KERNEL_PROC_NAME,
+                container=self.osi_container
+            )
+            kernel_map_obj.add_property(('pid', 0), sync=False)
+            kernel_map_obj.add_property(('username', "root"), sync=False)
+            kernel_map_obj.add_property(('uids', [0]), sync=False)
+            kernel_map_obj.add_property(('gids', [0]), sync=False)
+            kernel_map_obj.save()
+
         LOGGER.debug("MappingGear.sync_processs - " + str(operating_system.new_processs.__len__()) +
                      ' new processes found')
         for process in operating_system.new_processs:
