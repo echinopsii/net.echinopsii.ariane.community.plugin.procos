@@ -139,7 +139,7 @@ class DirectoryGear(InjectorGearSkeleton):
                                             current_possible_routing_area_config.append(routing_area_config)
                                             current_possible_subnet_config.append(subnet_config)
                                         nic_is_located = True
-                                        current_fqdn = socket.gethostbyaddr(nic.ipv4_address)[0]
+                                        current_fqdn = MapSocket.get_cached_hostbyaddr(nic.ipv4_address)
                                         if current_fqdn is not None:
                                             SystemGear.fqdn = current_fqdn
                                         break
@@ -1157,21 +1157,14 @@ class MappingGear(InjectorGearSkeleton):
                                         str(map_socket.destination_port)
 
                                     target_fqdn = None
-                                    try:
-                                        if map_socket.family == "AF_INET":
-                                            target_fqdn = socket.gethostbyaddr(map_socket.destination_ip)[0]
-                                        elif map_socket.family == "AF_INET6":
-                                            target_fqdn = socket.gethostbyaddr(MapSocket.ipv6_2_ipv4(
-                                                map_socket.destination_ip))[0]
-
-                                    except socket.herror as e:
-                                        LOGGER.debug(str(map_socket))
-                                        LOGGER.debug(e.__str__())
-                                        LOGGER.debug(traceback.format_exc())
-                                    except OSError as e:
-                                        LOGGER.debug(str(map_socket))
-                                        LOGGER.debug(e.__str__())
-                                        LOGGER.debug(traceback.format_exc())
+                                    if map_socket.family == "AF_INET":
+                                        target_fqdn = MapSocket.get_cached_hostbyaddr(
+                                            map_socket.destination_ip
+                                        )
+                                    elif map_socket.family == "AF_INET6":
+                                        target_fqdn = MapSocket.get_cached_hostbyaddr(
+                                            MapSocket.ipv6_2_ipv4(map_socket.destination_ip)
+                                        )
 
                                     target_container = None if not destination_is_local else self.osi_container
                                     target_node = None
@@ -1607,10 +1600,10 @@ class MappingGear(InjectorGearSkeleton):
             try:
                 start_time = timeit.default_timer()
                 self.cache_clean_counter += 1
+                operating_system = component.operating_system.get()
                 if self.cache_clean_counter == self.cache_clean_counter_max:
                     self.cache_clean_counter = 0
-                    self.target_osi_cache = {}
-                operating_system = component.operating_system.get()
+                    self.target_osi_cache.clear()
                 self.sync_container(operating_system)
                 self.sync_processs(operating_system)
                 self.sync_map_socket(operating_system)

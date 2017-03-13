@@ -22,6 +22,8 @@ import logging
 import re
 import socket
 import netifaces
+import timeit
+import traceback
 import psutil
 
 __author__ = 'mffrench'
@@ -30,6 +32,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 class MapSocket(object):
+
+    cached_hostbyaddr = {}
+
     def __init__(self, source_ip=None, source_port=None, source_endpoint_id=None,
                  destination_ip=None, destination_port=None, destination_osi_id=None,
                  destination_subnet_id=None, destination_routing_area_id=None, destination_location_id=None,
@@ -159,6 +164,46 @@ class MapSocket(object):
             return 'AF_UNIX'
         else:
             return family
+
+    @staticmethod
+    def get_cached_hostbyaddr(host):
+        ret = None
+        in_cache = False
+        if host in MapSocket.cached_hostbyaddr.keys():
+            # update hostbyaddr cache every day
+            if timeit.default_timer() - MapSocket.cached_hostbyaddr[host]['time'] > 3600*24:
+                MapSocket.cached_hostbyaddr.pop(host)
+            else:
+                in_cache = True
+
+        if in_cache:
+            ret = MapSocket.cached_hostbyaddr[host]['hostbyaddr']
+        else:
+            try:
+                ret = socket.gethostbyaddr(host)[0]
+                MapSocket.cached_hostbyaddr[host] = {
+                    'hostbyaddr': ret,
+                    'time': timeit.default_timer()
+                }
+            except socket.herror as e:
+                MapSocket.cached_hostbyaddr[host] = {
+                    'hostbyaddr': None,
+                    'time': timeit.default_timer()
+                }
+                LOGGER.debug(str(host))
+                LOGGER.debug(e.__str__())
+                LOGGER.debug(traceback.format_exc())
+            except OSError as e:
+                MapSocket.cached_hostbyaddr[host] = {
+                    'hostbyaddr': None,
+                    'time': timeit.default_timer()
+                }
+                LOGGER.debug(str(host))
+                LOGGER.debug(e.__str__())
+                LOGGER.debug(traceback.format_exc())
+        return ret
+
+
 
 
 class Process(object):
