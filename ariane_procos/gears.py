@@ -1261,7 +1261,8 @@ class MappingGear(InjectorGearSkeleton):
 
                                         endpoints = EndpointService.find_endpoint(
                                             selector=selector,
-                                            cid=target_container.id
+                                            cid=target_container.id,
+                                            local_cache=destination_is_local
                                         )
 
                                         if endpoints is not None and endpoints.__len__() == 1:
@@ -1408,6 +1409,7 @@ class MappingGear(InjectorGearSkeleton):
                     #     else:
                     #         LOGGER.warn("Dead socket (link : " + str(map_socket.link_id) + ") "
                     #                     "doesn't exist anymore on DB !")
+                    destination_is_local = operating_system.is_local_destination(map_socket)
                     if map_socket.source_endpoint_id is not None and \
                        (
                             map_socket.source_endpoint_id not in operating_system.wip_delete_duplex_links_endpoints or
@@ -1435,7 +1437,10 @@ class MappingGear(InjectorGearSkeleton):
                                 operating_system.wip_delete_duplex_links_endpoints or
                                 map_socket.destination_endpoint_id not in operating_system.duplex_links_endpoints
                             ):
-                        target_endpoint = EndpointService.find_endpoint(eid=map_socket.destination_endpoint_id)
+                        target_endpoint = EndpointService.find_endpoint(
+                            eid=map_socket.destination_endpoint_id,
+                            local_cache=destination_is_local
+                        )
                         if target_endpoint is not None:
                             array_link = LinkService.find_link(tep_id=target_endpoint.id)
                             if array_link is not None and array_link.__len__() == 0:
